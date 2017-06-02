@@ -66,11 +66,6 @@ RTC_Millis rtc;
 
 ledLight light(PIN_LIGHT);
 
-uint8_t status = 0;
-uint8_t light_status = 0;
-uint8_t light_dim = 0;
-uint16_t light_power = 0;
-
 /* Setup and loop */
 
 void setup() {
@@ -498,13 +493,13 @@ void handleSchedule() {
   DynamicJsonBuffer jsonBuffer;
   JsonObject& json = jsonBuffer.createObject();
 
-  int enable = webServer.arg("enabled").toInt();
+  int enabled = webServer.arg("enabled").toInt();
   int on_h  = webServer.arg("on_h").toInt();
   int on_m  = webServer.arg("on_m").toInt();
   int off_h = webServer.arg("off_h").toInt();
   int off_m = webServer.arg("off_m").toInt();
   int dim = webServer.arg("dim").toInt();
-  light.schedule(enable);
+  light.schedule(enabled);
   light.schedule(on_h,on_m,off_h,off_m);
   light.dim(dim);
   EEPROM.write(EEPROM_DIM_ADDR,   char(light.dim()));
@@ -536,8 +531,8 @@ void handleStatus() {
   DateTime now = rtc.now();
   DynamicJsonBuffer jsonBuffer;
   JsonObject& json = jsonBuffer.createObject();
-  json["power"] = light_power;
-  json["status"] = light_status;
+  json["power"] = light.power();
+  json["status"] = light.status();
   json["enable_schedule"] = light.schedule();
   json["dim"] = light.dim();
   json["on_h"] = light.on_h();
