@@ -48,9 +48,9 @@ ledLight light(PIN_LIGHT);
 /* Setup and loop */
 
 void setup() {
-  pinMode(PIN_LIGHT,OUTPUT);
-  digitalWrite(PIN_LIGHT,LOW);
-  
+  pinMode(PIN_LIGHT, OUTPUT);
+  digitalWrite(PIN_LIGHT, LOW);
+
   p_millis = millis();
 #ifdef DEBUG
   Serial.begin(115200);
@@ -216,7 +216,7 @@ boolean restoreConfig() {
     int e_off_m = EEPROM.read(EEPROM_SCHEDULE_ADDR + 4);
     light.schedule(e_on_h, e_on_m, e_off_h, e_off_m);
 
-    int e_dim = EEPROM.read(EEPROM_DIM_ADDR) | EEPROM.read(EEPROM_DIM_ADDR+1) << 8;
+    int e_dim = EEPROM.read(EEPROM_DIM_ADDR) | EEPROM.read(EEPROM_DIM_ADDR + 1) << 8;
     light.dim(e_dim);
 #ifdef DEBUG
     Serial.print("schedule:");
@@ -445,6 +445,8 @@ void handleSchedule() {
   DynamicJsonBuffer jsonBuffer;
   JsonObject& json = jsonBuffer.createObject();
 
+  on_h = on_m = off_h = off_m = dim = -1;
+
   for (int i = 0; i < webServer.args(); i++) {
     argname = webServer.argName(i);
     argv = webServer.arg(i);
@@ -456,7 +458,10 @@ void handleSchedule() {
 #endif
     if (argname == "enable") {
        enable = argv ==  "true" ? 1 : 0;
-    } else if (argname == "on_h") {
+       light.schedule(enable);
+       EEPROM.write(EEPROM_SCHEDULE_ADDR, char(light.schedule()));
+       EEPROM.commit();
+   } else if (argname == "on_h") {
        on_h  = argv.toInt();
     } else if (argname == "on_m") {
        on_m  = argv.toInt();
@@ -466,25 +471,22 @@ void handleSchedule() {
        off_m  = argv.toInt();
     } else if (argname == "dim") {
        dim  = argv.toInt();
+       light.dim(dim);
+       EEPROM.write(EEPROM_DIM_ADDR,   char(light.dim() & 0xFF));
+       EEPROM.write(EEPROM_DIM_ADDR+1,   char(light.dim() >> 8));
+       EEPROM.commit();
     }
   }
-  light.schedule(enable);
-  light.schedule(on_h,on_m,off_h,off_m);
-  light.dim(dim);
+
+  if (!(on_h < 0 || on_m < 0 || off_h < 0 || off_m < 0)) {
+    light.schedule(on_h,on_m,off_h,off_m);
+    EEPROM.write(EEPROM_SCHEDULE_ADDR + 1, char(light.on_h()));
+    EEPROM.write(EEPROM_SCHEDULE_ADDR + 2, char(light.on_m()));
+    EEPROM.write(EEPROM_SCHEDULE_ADDR + 3, char(light.off_h()));
+    EEPROM.write(EEPROM_SCHEDULE_ADDR + 4, char(light.off_m()));
+    EEPROM.commit();
+  }
   
-  EEPROM.write(EEPROM_DIM_ADDR,   char(light.dim() & 0xFF));
-  EEPROM.write(EEPROM_DIM_ADDR+1,   char(light.dim() >> 8));
-  EEPROM.commit();
-  EEPROM.write(EEPROM_SCHEDULE_ADDR, char(light.schedule()));
-  EEPROM.commit();
-
-  EEPROM.write(EEPROM_SCHEDULE_ADDR + 1, char(light.on_h()));
-  EEPROM.write(EEPROM_SCHEDULE_ADDR + 2, char(light.on_m()));
-  EEPROM.commit();
-  EEPROM.write(EEPROM_SCHEDULE_ADDR + 3, char(light.off_h()));
-  EEPROM.write(EEPROM_SCHEDULE_ADDR + 4, char(light.off_m()));
-  EEPROM.commit();
-
   json["enable_schedule"] = light.schedule();
   json["dim"] = light.dim();
   json["on_h"] = light.on_h();

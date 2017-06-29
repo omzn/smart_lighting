@@ -47,7 +47,7 @@ void ledLight::schedule(int on_h, int on_m, int off_h, int off_m) {
 }
 
 int ledLight::power() {
-  return _power;
+  return int(_power);
 }
 
 void ledLight::power(int v) {
