@@ -51,17 +51,27 @@ int ledLight::power() {
 }
 
 void ledLight::power(int v) {
-  if (v >= 0 && v <= MAX_PWM_VALUE) {
+  if (v > 0 && v < MAX_PWM_VALUE ) {
     _power = v;
-  } else {
+  } else if (v >= MAX_PWM_VALUE ) {
     _power = MAX_PWM_VALUE;
+  } else if (v <= 0) {
+    _power = 0;
   }
   if (_power == MAX_PWM_VALUE) {
     _status = LIGHT_ON;
   } else if (_power == 0) {
     _status = LIGHT_OFF;
   }
-  analogWrite(_pin, _power);
+  if (_power >= MAX_PWM_VALUE) {
+    _power = MAX_PWM_VALUE;
+    digitalWrite(_pin, HIGH);
+  } else if (_power <= 0) {
+    _power = 0;
+    digitalWrite(_pin, LOW);
+  } else {
+    analogWrite(_pin, int(_power));
+  }
 #ifdef DEBUG
   Serial.print("pwm: ");
   Serial.println(_power);
@@ -95,7 +105,7 @@ int ledLight::off_m() {
   return _off_m;
 }
 
-uint8_t ledLight::dim() {
+uint16_t ledLight::dim() {
   return _dim;
 }
 
@@ -115,13 +125,65 @@ int ledLight::control(uint16_t val) {
   }
 }
 
+void ledLight::incPower(float v) {
+  if (v >= 0 && v <= MAX_PWM_VALUE) {
+    _power += v;
+    if (_power >= MAX_PWM_VALUE) {
+      _power = MAX_PWM_VALUE;
+    }
+  } else {
+    _power = MAX_PWM_VALUE;
+  }
+  if (int(_power) >= MAX_PWM_VALUE) {
+    _power = MAX_PWM_VALUE;
+    digitalWrite(_pin, HIGH);
+  } else {
+    analogWrite(_pin, int(_power));
+  }
+#ifdef DEBUG
+  Serial.print("pwm: ");
+  Serial.println(_power);
+  Serial.print("status: ");
+  Serial.println(_status);
+#endif
+}
+
+void ledLight::decPower(float v) {
+  if (v >= 0 && v <= MAX_PWM_VALUE) {
+    _power -= v;
+    if (_power <= 0 ) {
+      _power = 0;
+    }
+  } else {
+    _power = 0;
+  }
+  if ((int)_power <= 0) {
+    digitalWrite(_pin, LOW);
+  } else {
+    analogWrite(_pin, int(_power));
+  }
+#ifdef DEBUG
+  Serial.print("pwm: ");
+  Serial.println(_power);
+  Serial.print("status: ");
+  Serial.println(_status);
+#endif
+}
+
+
 // hh:mm時点で点灯すべきかどうかを判断する．1秒毎に呼び出される．
 void ledLight::control(int hh, int mm) {
   if (_status == LIGHT_TURNING_ON) {
-    power(_power + 1);
+    incPower(float(MAX_PWM_VALUE) / float(_dim));
+    if (_power == MAX_PWM_VALUE) {
+      _status = LIGHT_ON;
+    }
   }
   else if (_status == LIGHT_TURNING_OFF) {
-    power(_power - 1);
+    decPower(float(MAX_PWM_VALUE) / float(_dim));
+    if (_power == 0) {
+      _status = LIGHT_OFF;
+    }
   }
   else if (_enable_schedule) {
     if ((_on_h < _off_h) || (_on_h == _off_h && _on_m <= _off_m )) {

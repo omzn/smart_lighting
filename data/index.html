@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>わいふぁい あくあたん らいと</title>
+<title>WiFi Aqua-tan LED Light</title>
 <link rel="stylesheet" href="./pure.css">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/grids-responsive-min.css">
@@ -11,6 +11,9 @@
 <body>
 <div class="p-m pure-menu-horizontal pure-menu-scrollable pm-fix">
   <a href="#" class="pure-menu-heading"><img width='32' height='32' title='' alt='' src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IB2cksfwAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAACXBIWXMAAAsTAAALEwEAmpwYAAABWWlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNS40LjAiPgogICA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogICAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgICAgICB4bWxuczp0aWZmPSJodHRwOi8vbnMuYWRvYmUuY29tL3RpZmYvMS4wLyI+CiAgICAgICAgIDx0aWZmOk9yaWVudGF0aW9uPjE8L3RpZmY6T3JpZW50YXRpb24+CiAgICAgIDwvcmRmOkRlc2NyaXB0aW9uPgogICA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgpMwidZAAABnklEQVRYCb2XUVLEMAxDW4b7X7mgwssorp2mtDQzYMeWJcW7fLBs27bo56VzEPp4SVgyEl9/o+77+SSZiAf3xYxEdCKeOib2+6yBSCYBCJX7AVv1HbuMDEDUDdhF/SjCTKzbWJ9W34FZInCwSnhaXEOjDUBEFD4KqnbrZBuQiIu6QFYX/oqxjj8z4IJZLhOVkQw/NBcNAFYkz0hVmzURcbo3bjegopo+gJE28N3341jqzHCPseNyAw7ESCbgOOVgY70TsmbHGf8KsiEGsh4GPDqOHA7z8ZNWG3CgSCDyOjl9MJkYPWZanDHQwBMJQpUJzLa+fwQUIYl6Z33wmhcWvNfJW3x6AxDzUu6KGCLuPd+Ag5/K4zY7cYn81wamH3BlA/E10yIj4JsbOKxfxqoNZOA7G8j49sVkGxA4EytJdqb613ButIHMRC2Td4biGsk2ANXpMMA/Rj1wqzYAp0z4JtyU18HHeIZZRxuIZE/f98ecbSCKnr0o4qt72+RVAxXhTL2JOvjMwJ0Xp4Iurvzud6ASqepRf1lf/Nf8IK7CF5KQSk/UTlbbAAAAAElFTkSuQmCC'></a>
+  <ul class="pure-menu-list">
+    <li class="pure-menu-item"><a href="#" class="pure-menu-link">WiFi Aqua-tan LED Light</a></li>
+  </ul>  
 </div>
 
 <div class="l-content">
@@ -23,7 +26,7 @@
           <h2>LED Light</h2>
 
           <span class="at-val">
-            <div id="ls">ON</div><span id="lv">1023</span>
+            <div id="ls">--</div><span id="lv">--</span>
           </span>
         </div>
       </div>
@@ -37,23 +40,23 @@
       <div class="pure-u-1 pure-u-md-1-2">
         <div class="l-box">
           <h3 class="if-head">Auto lighting schedule</h3>
-          <p>Set the schedule of lighting.</p>
+          <p>Set the lighting schedule.</p>
           <p>
 	    <form name="/schedule" id="frm_sch" class="pure-form pure-form-stacked">
 	      <fieldset>
 		<legend>Scheduler</legend>
 		<div class="pure-g">
 		  <div class="pure-u-1 pure-u-md-1-1">
-		    <input id="enabled" value="1" type="checkbox"> Enable
+		    <input id="enable" value="1" type="checkbox"> Enable
 		  </div>
 		</div>
 		<legend>Turn on time</legend>
 		<div class="pure-g">
 		  <div class="pure-u-1 pure-u-md-1-5">
-		    <input id="on_h" class="pure-u-22-24" type="text" placeholder="hour">
+		    <input id="on_h" class="pure-u-22-24" type="text">
 		  </div>
 		  <div class="pure-u-1 pure-u-md-1-5">
-		    <input id="on_m" class="pure-u-22-24" type="text" placeholder="min">
+		    <input id="on_m" class="pure-u-22-24" type="text">
 		  </div>
 		  <div class="pure-u-1 pure-u-md-3-5">
 		  </div>
@@ -61,19 +64,19 @@
 		<legend>Turn off time</legend>
 		<div class="pure-g">
 		  <div class="pure-u-1 pure-u-md-1-5">
-		    <input id="off_h" class="pure-u-22-24" type="text" placeholder="hour">
+		    <input id="off_h" class="pure-u-22-24" type="text">
 		  </div>
 		  <div class="pure-u-1 pure-u-md-1-5">
-		    <input id="off_m" class="pure-u-22-24" type="text" placeholder="min">
+		    <input id="off_m" class="pure-u-22-24" type="text">
 		  </div>
 		  <div class="pure-u-1 pure-u-md-3-5">
 		  </div>
 		</div>
 
-		<legend>Turn on/off duration (0 is immediate. Takes N * 1024 seconds for on/off.)</legend>
+		<legend>Turn on/off duration (0 is immediate.)</legend>
 		<div class="pure-g">
 		  <div class="pure-u-1 pure-u-md-1-5">
-		    <input id="dim" class="pure-u-22-24" type="text" placeholder="seconds">
+		    <input id="dim" class="pure-u-22-24" type="text" >
 		  </div>
 		</div>
 
@@ -84,6 +87,10 @@
         </div>
       </div>
 
+      <div class="pure-u-1 pure-u-md-1-2">
+        <div class="l-box">
+        </div>
+      </div>
 
       <div class="pure-u-1 pure-u-md-1-2">
         <div class="l-box">
@@ -117,7 +124,7 @@
 </div> <!-- end l-content -->
 <div class="footer l-box">
     <p>
-        WiFi あくあたん らいと by @omzn 2017 / All rights researved
+        WiFi Aqua-tan LED Light by @omzn 2017 / All rights researved
     </p>
 </div>
 <script type="text/javascript">
@@ -125,22 +132,22 @@
 $('form#frm_sch').submit(
     function(ev) {
 	$.post('/schedule',
-                "enabled="+$('#enabled').val()
-               +"on_h="+$('#on_h').val()
-               +"on_m="+$('#on_m').val()
-               +"off_h="+$('#off_h').val()
-               +"off_m="+$('#off_m').val()
-               +"dim="+$('#dim').val()
+                "enable="+$('#enable').prop('checked').toString()
+               +"&on_h="+$('#on_h').val()
+               +"&on_m="+$('#on_m').val()
+               +"&off_h="+$('#off_h').val()
+               +"&off_m="+$('#off_m').val()
+               +"&dim="+$('#dim').val(),
 	       read,"json");
 	$('#sch_sub').prop('disabled', true);
 	return false;
     });
 
 function read(json) {
-    if (json.enabled_schedule == 1) {
-	$('#enabled').prop("checked",true);
+    if (json.enable_schedule == 1) {
+	$('#enable').prop("checked",true);
     } else {
-	$('#enabled').prop("checked",false);
+	$('#enable').prop("checked",false);
     }
     $('#on_h').val(json.on_h);
     $('#on_m').val(json.on_m);
@@ -151,36 +158,28 @@ function read(json) {
 
 function update() {
     $.getJSON('/status',function(json){
-	read(json);
+        if (json.enable_schedule == 1) { 
+    	    $('#enable').prop("checked",true);
+        } else {
+	    $('#enable').prop("checked",false);
+        }
 	if ( json.status == 3) {
-	    $('#ls').html("Turning ON");
+	    $('#ls').html("Turn ON");
         } else if (json.status == 2) {
-	    $('#ls').html("Turning OFF");
+	    $('#ls').html("Turn OFF");
 	} else if (json.status == 0) {
 	    $('#ls').html("OFF");
 	} else if (json.status == 1) {
 	    $('#ls').html("ON");
         }
         $('#lv').html(json.power.toString());
-	if($('#enabled').is(":checked")){
-	    $('#on_h').prop('disabled', false);
-	    $('#on_m').prop('disabled', false);
-	    $('#off_h').prop('disabled', false);
-	    $('#off_m').prop('disabled', false);
-	} else {
-	    $('#sch_sub').prop('disabled', true);
-	    $('#on_h').prop('disabled', true);
-	    $('#on_m').prop('disabled', true);
-	    $('#off_h').prop('disabled', true);
-	    $('#off_m').prop('disabled', true);
-	}
     });
 }
 
 function confset() {
     $.getJSON('/status',function(json){
 	read(json);
-	if($('#enabled').is(":checked")){
+	if($('#enable').is(":checked")){
 	    $('#on_h').prop('disabled', false);
 	    $('#on_m').prop('disabled', false);
 	    $('#off_h').prop('disabled', false);
@@ -198,6 +197,27 @@ function confset() {
 
 $(function() {
     
+    $('#enable').click(function(){
+	if($(this).is(":checked")){
+	    $('#on_h').prop('disabled', false);
+	    $('#on_m').prop('disabled', false);
+	    $('#off_h').prop('disabled', false);
+	    $('#off_m').prop('disabled', false);
+	    $.post('/schedule',
+		   "enable="+$('#enable').prop('checked').toString(),
+		   read,"json");
+	} else if($(this).is(":not(:checked)")){
+	    $('#sch_sub').prop('disabled', true);
+	    $('#on_h').prop('disabled', true);
+	    $('#on_m').prop('disabled', true);
+	    $('#off_h').prop('disabled', true);
+	    $('#off_m').prop('disabled', true);
+	    $.post('/schedule',
+		   "enable="+$('#enable').prop('checked').toString(),
+		   read,"json");
+	}
+    });
+
     $('#sch_sub').prop('disabled', true);
 
     $('#on_h').keyup(function() {
@@ -230,6 +250,7 @@ $(function() {
 	}
     });
 
+    confset();
     update();
     setInterval("update()",15000);
 });

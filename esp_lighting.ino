@@ -1,7 +1,6 @@
 /*
-   ESP-WROOM-02 remote servo operator (for air conditioner control)
-     RTC:  DS1307
-     MPU:  ESP-WROOM-02
+   ESP-WROOM-02 remote light manager
+   MPU:  ESP-WROOM-02
 */
 
 #include "esp_lighting.h" // Configuration parameters
@@ -19,56 +18,39 @@
 #include <ArduinoJson.h>
 #include <RTClib.h>
 #include <FS.h>
-
+#include "ntp.h"
 #include "ledlight.h"
 
-//#define PIN_SDA          (2)
-//#define PIN_SCL          (5)
-#define PIN_LIGHT          (2)
-//#define PIN_BUTTON       (0)
-//#define PIN_LED         (15)
-//#define PIN_TFT_DC       (4)
-//#define PIN_TFT_CS      (15)
-//#define PIN_SD_CS       (16)
-//#define PIN_SPI_CLK   (14)
-//#define PIN_SPI_MOSI  (13)
-//#define PIN_SPI_MISO  (12)
-
-#define EEPROM_SSID_ADDR             (0)
-#define EEPROM_PASS_ADDR            (32)
-#define EEPROM_MDNS_ADDR            (96)
-#define EEPROM_SCHEDULE_ADDR       (128)
-#define EEPROM_DIM_ADDR            (133)
-#define EEPROM_LAST_ADDR           (134)
-
-#define UDP_LOCAL_PORT      (2390)
-#define NTP_PACKET_SIZE       (48)
-#define SECONDS_UTC_TO_JST (32400)
-
-const String website_name  = "esplight1";
+const String website_name  = "esplight";
 const char* apSSID         = "WIFI_LIGHT_TAN";
-const char* timeServer     = "ntp.nict.jp";
 String sitename;
 boolean settingMode;
 String ssidList;
 
 uint32_t timer_count = 0;
 
-byte packetBuffer[NTP_PACKET_SIZE];
 uint32_t p_millis;
 DNSServer dnsServer;
 MDNSResponder mdns;
-WiFiUDP udp;
+
 const IPAddress apIP(192, 168, 1, 1);
 ESP8266WebServer webServer(80);
 
 RTC_Millis rtc;
+
+//const char* timeServer     = "ntp.nict.jp";
+//byte packetBuffer[NTP_PACKET_SIZE];
+//WiFiUDP udp;
+NTP ntp("ntp.nict.jp");
 
 ledLight light(PIN_LIGHT);
 
 /* Setup and loop */
 
 void setup() {
+  pinMode(PIN_LIGHT,OUTPUT);
+  digitalWrite(PIN_LIGHT,LOW);
+  
   p_millis = millis();
 #ifdef DEBUG
   Serial.begin(115200);
@@ -78,10 +60,12 @@ void setup() {
 
   SPIFFS.begin();
   rtc.begin(DateTime(2017, 1, 1, 0, 0, 0));
+#ifdef DEBUG
+  Serial.println("RTC began");
+#endif
   sitename = website_name;
 
-  //  analogWrite(PIN_LIGHT,512);
-
+  WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
   if (restoreConfig()) {
     if (checkConnection()) {
@@ -92,7 +76,9 @@ void setup() {
       }
       settingMode = false;
 
-      udp.begin(UDP_LOCAL_PORT);
+      ntp.begin();
+      //udp.begin(UDP_LOCAL_PORT);
+
       startWebServer_normal();
       return;
     } else {
@@ -103,13 +89,25 @@ void setup() {
   }
 
   if (settingMode == true) {
-    WiFi.mode(WIFI_STA);
-    WiFi.disconnect();
+#ifdef DEBUG
+    Serial.println("Setting mode");
+#endif
+    //WiFi.mode(WIFI_STA);
+    //WiFi.disconnect();
+#ifdef DEBUG
+    Serial.println("Wifi disconnected");
+#endif
     delay(100);
     WiFi.mode(WIFI_AP);
+#ifdef DEBUG
+    Serial.println("Wifi AP mode");
+#endif
     WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
     WiFi.softAP(apSSID);
     dnsServer.start(53, "*", apIP);
+#ifdef DEBUG
+    Serial.println("Wifi AP configured");
+#endif
     startWebServer_setting();
 #ifdef DEBUG
     Serial.print("Starting Access Point at \"");
@@ -129,91 +127,25 @@ void loop() {
 
   // 1秒毎に実行
   if (millis() > p_millis + 1000) {
-
     p_millis = millis();
-    if (settingMode) {
-      if (timer_count % 360 == 359) {
-        ESP.restart();
+    if (timer_count % 3600 == 0) {
+      uint32_t epoch = ntp.getTime();
+      //uint32_t epoch = getNTPtime();
+      if (epoch > 0) {
+        rtc.adjust(DateTime(epoch + SECONDS_UTC_TO_JST ));
       }
-    } else {
-      DateTime now = rtc.now();
-      light.control(now.hour(), now.minute());
-
-      if (timer_count % 3600 == 0) {
-        uint32_t epoch = getNTPtime();
-        if (epoch > 0) {
-          rtc.adjust(DateTime(epoch + SECONDS_UTC_TO_JST ));
-        }
 #ifdef DEBUG
-        Serial.print("epoch:");
-        Serial.println(epoch);
+      Serial.print("epoch:");
+      Serial.println(epoch);
 #endif
-      }
     }
+    DateTime now = rtc.now();
+    light.control(now.hour(), now.minute());
+
     timer_count++;
     timer_count %= (86400UL);
   }
-  //delay(1000);
-}
-
-
-/*
-   NTP related functions
-*/
-
-// send an NTP request to the time server at the given address
-void sendNTPpacket(const char* address) {
-  //  Serial.print("sendNTPpacket : ");
-  //  Serial.println(address);
-
-  // set all bytes in the buffer to 0
-  memset(packetBuffer, 0, NTP_PACKET_SIZE);
-  // Initialize values needed to form NTP request
-  // (see URL above for details on the packets)
-  packetBuffer[0]  = 0b11100011;   // LI, Version, Mode
-  packetBuffer[1]  = 0;     // Stratum, or type of clock
-  packetBuffer[2]  = 6;     // Polling Interval
-  packetBuffer[3]  = 0xEC;  // Peer Clock Precision
-  // 8 bytes of zero for Root Delay & Root Dispersion
-  packetBuffer[12] = 49;
-  packetBuffer[13] = 0x4E;
-  packetBuffer[14] = 49;
-  packetBuffer[15] = 52;
-  // all NTP fields have been given values, now
-  // you can send a packet requesting a timestamp:
-  udp.beginPacket(address, 123); //NTP requests are to port 123
-  udp.write(packetBuffer, NTP_PACKET_SIZE);
-  udp.endPacket();
-}
-
-uint32_t readNTPpacket() {
-  //  Serial.println("Receive NTP Response");
-  udp.read(packetBuffer, NTP_PACKET_SIZE);  // read packet into the buffer
-  unsigned long secsSince1900 = 0;
-  // convert four bytes starting at location 40 to a long integer
-  secsSince1900 |= (unsigned long)packetBuffer[40] << 24;
-  secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
-  secsSince1900 |= (unsigned long)packetBuffer[42] <<  8;
-  secsSince1900 |= (unsigned long)packetBuffer[43] <<  0;
-  return secsSince1900 - 2208988800UL; // seconds since 1970
-}
-
-uint32_t getNTPtime() {
-  while (udp.parsePacket() > 0) ; // discard any previously received packets
-#ifdef DEBUG
-  Serial.println("Transmit NTP Request");
-#endif
-  sendNTPpacket(timeServer);
-
-  uint32_t beginWait = millis();
-  while (millis() - beginWait < 1500) {
-    int size = udp.parsePacket();
-    if (size >= NTP_PACKET_SIZE) {
-      return readNTPpacket();
-    }
-  }
-
-  return 0; // return 0 if unable to get the time
+  delay(10);
 }
 
 /***************************************************************
@@ -229,11 +161,21 @@ boolean restoreConfig() {
 
   // Initialize on first boot
   if (EEPROM.read(0) == 255) {
+#ifdef DEBUG
+    Serial.println("Initialize EEPROM...");
+#endif
     for (int i = 0; i < EEPROM_LAST_ADDR; ++i) {
       EEPROM.write(i, 0);
     }
+#ifdef DEBUG
+    Serial.println("Erasing EEPROM...");
+#endif
     EEPROM.commit();
   }
+
+#ifdef DEBUG
+  Serial.println("Reading EEPROM(2)...");
+#endif
 
   if (EEPROM.read(EEPROM_SSID_ADDR) != 0) {
     for (int i = EEPROM_SSID_ADDR; i < EEPROM_SSID_ADDR + 32; ++i) {
@@ -248,9 +190,12 @@ boolean restoreConfig() {
     Serial.print("pass:");
     Serial.println(pass);
 #endif
-
+    delay(100);
     WiFi.begin(ssid.c_str(), pass.c_str());
-
+#ifdef DEBUG
+    Serial.println("WiFi started");
+#endif
+    delay(100);
     if (EEPROM.read(EEPROM_MDNS_ADDR) != 0) {
       sitename = "";
       for (int i = 0; i < 32; ++i) {
@@ -271,7 +216,7 @@ boolean restoreConfig() {
     int e_off_m = EEPROM.read(EEPROM_SCHEDULE_ADDR + 4);
     light.schedule(e_on_h, e_on_m, e_off_h, e_off_m);
 
-    int e_dim = EEPROM.read(EEPROM_DIM_ADDR);
+    int e_dim = EEPROM.read(EEPROM_DIM_ADDR) | EEPROM.read(EEPROM_DIM_ADDR+1) << 8;
     light.dim(e_dim);
 #ifdef DEBUG
     Serial.print("schedule:");
@@ -290,6 +235,9 @@ boolean restoreConfig() {
 
     return true;
   } else {
+#ifdef DEBUG
+    Serial.println("restore config fails...");
+#endif
     return false;
   }
 }
@@ -437,6 +385,7 @@ void startWebServer_normal() {
   webServer.on("/on", handleActionOn);
   webServer.on("/off", handleActionOff);
   webServer.on("/status", handleStatus);
+  webServer.on("/schedule", handleSchedule);
   webServer.begin();
 }
 
@@ -468,6 +417,7 @@ void handleActionOn() {
   }
   json["power"] = light.power();
   json["status"] = light.status();
+  json["timestamp"] = timestamp();  
   json.printTo(message);
   webServer.send(200, "application/json", message);
 }
@@ -484,25 +434,46 @@ void handleActionOff() {
   }
   json["power"] = light.power();
   json["status"] = light.status();
+  json["timestamp"] = timestamp();  
   json.printTo(message);
   webServer.send(200, "application/json", message);
 }
 
 void handleSchedule() {
-  String message;
+  String message,argname,argv;
+  int enable,on_h,on_m,off_h,off_m,dim;
   DynamicJsonBuffer jsonBuffer;
   JsonObject& json = jsonBuffer.createObject();
 
-  int enabled = webServer.arg("enabled").toInt();
-  int on_h  = webServer.arg("on_h").toInt();
-  int on_m  = webServer.arg("on_m").toInt();
-  int off_h = webServer.arg("off_h").toInt();
-  int off_m = webServer.arg("off_m").toInt();
-  int dim = webServer.arg("dim").toInt();
-  light.schedule(enabled);
+  for (int i = 0; i < webServer.args(); i++) {
+    argname = webServer.argName(i);
+    argv = webServer.arg(i);
+#ifdef DEBUG
+    Serial.print("argname:");
+    Serial.print(argname);
+    Serial.print(" = ");
+    Serial.println(argv);
+#endif
+    if (argname == "enable") {
+       enable = argv ==  "true" ? 1 : 0;
+    } else if (argname == "on_h") {
+       on_h  = argv.toInt();
+    } else if (argname == "on_m") {
+       on_m  = argv.toInt();
+    } else if (argname == "off_h") {
+       off_h  = argv.toInt();
+    } else if (argname == "off_m") {
+       off_m  = argv.toInt();
+    } else if (argname == "dim") {
+       dim  = argv.toInt();
+    }
+  }
+  light.schedule(enable);
   light.schedule(on_h,on_m,off_h,off_m);
   light.dim(dim);
-  EEPROM.write(EEPROM_DIM_ADDR,   char(light.dim()));
+  
+  EEPROM.write(EEPROM_DIM_ADDR,   char(light.dim() & 0xFF));
+  EEPROM.write(EEPROM_DIM_ADDR+1,   char(light.dim() >> 8));
   EEPROM.commit();
   EEPROM.write(EEPROM_SCHEDULE_ADDR, char(light.schedule()));
   EEPROM.commit();
@@ -520,6 +491,7 @@ void handleSchedule() {
   json["on_m"] = light.on_m();
   json["off_h"] = light.off_h();
   json["off_m"] = light.off_m();
+  json["timestamp"] = timestamp();  
   json.printTo(message);
   webServer.send(200, "application/json", message);
 }
@@ -527,8 +499,6 @@ void handleSchedule() {
 
 void handleStatus() {
   String message;
-  char str[20];
-  DateTime now = rtc.now();
   DynamicJsonBuffer jsonBuffer;
   JsonObject& json = jsonBuffer.createObject();
   json["power"] = light.power();
@@ -539,10 +509,18 @@ void handleStatus() {
   json["on_m"] = light.on_m();
   json["off_h"] = light.off_h();
   json["off_m"] = light.off_m();
-  sprintf(str,"%04d-%02d-%02d %02d:%02d",now.year(),now.month(),now.day(),now.hour(),now.minute());
-  json["timestamp"] = str;  
+  json["timestamp"] = timestamp();  
   json.printTo(message);
   webServer.send(200, "application/json", message);
+}
+
+String timestamp() {
+  String ts;
+  DateTime now = rtc.now();
+  char str[20];
+  sprintf(str,"%04d-%02d-%02d %02d:%02d:%02d",now.year(),now.month(),now.day(),now.hour(),now.minute(),now.second());
+  ts = str;
+  return ts; 
 }
 
 void send_fs (String path,String contentType) {
@@ -612,3 +590,63 @@ String urlDecode(String input) {
   return s;
 }
 
+
+/*
+   NTP related functions
+*/
+/*
+// send an NTP request to the time server at the given address
+void sendNTPpacket(const char* address) {
+  //  Serial.print("sendNTPpacket : ");
+  //  Serial.println(address);
+
+  // set all bytes in the buffer to 0
+  memset(packetBuffer, 0, NTP_PACKET_SIZE);
+  // Initialize values needed to form NTP request
+  // (see URL above for details on the packets)
+  packetBuffer[0]  = 0b11100011;   // LI, Version, Mode
+  packetBuffer[1]  = 0;     // Stratum, or type of clock
+  packetBuffer[2]  = 6;     // Polling Interval
+  packetBuffer[3]  = 0xEC;  // Peer Clock Precision
+  // 8 bytes of zero for Root Delay & Root Dispersion
+  packetBuffer[12] = 49;
+  packetBuffer[13] = 0x4E;
+  packetBuffer[14] = 49;
+  packetBuffer[15] = 52;
+  // all NTP fields have been given values, now
+  // you can send a packet requesting a timestamp:
+  udp.beginPacket(address, 123); //NTP requests are to port 123
+  udp.write(packetBuffer, NTP_PACKET_SIZE);
+  udp.endPacket();
+}
+
+uint32_t readNTPpacket() {
+  //  Serial.println("Receive NTP Response");
+  udp.read(packetBuffer, NTP_PACKET_SIZE);  // read packet into the buffer
+  unsigned long secsSince1900 = 0;
+  // convert four bytes starting at location 40 to a long integer
+  secsSince1900 |= (unsigned long)packetBuffer[40] << 24;
+  secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
+  secsSince1900 |= (unsigned long)packetBuffer[42] <<  8;
+  secsSince1900 |= (unsigned long)packetBuffer[43] <<  0;
+  return secsSince1900 - 2208988800UL; // seconds since 1970
+}
+
+uint32_t getNTPtime() {
+  while (udp.parsePacket() > 0) ; // discard any previously received packets
+#ifdef DEBUG
+  Serial.println("Transmit NTP Request");
+#endif
+  sendNTPpacket(timeServer);
+
+  uint32_t beginWait = millis();
+  while (millis() - beginWait < 1500) {
+    int size = udp.parsePacket();
+    if (size >= NTP_PACKET_SIZE) {
+      return readNTPpacket();
+    }
+  }
+
+  return 0; // return 0 if unable to get the time
+}
+*/
