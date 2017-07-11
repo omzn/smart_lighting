@@ -50,7 +50,7 @@ int ledLight::power() {
   return int(_power);
 }
 
-void ledLight::power(int v) {
+void ledLight::power(float v) {
   if (v > 0 && v < MAX_PWM_VALUE ) {
     _power = v;
   } else if (v >= MAX_PWM_VALUE ) {
@@ -58,19 +58,22 @@ void ledLight::power(int v) {
   } else if (v <= 0) {
     _power = 0;
   }
-  if (_power == MAX_PWM_VALUE) {
-    _status = LIGHT_ON;
-  } else if (_power == 0) {
-    _status = LIGHT_OFF;
-  }
+
   if (_power >= MAX_PWM_VALUE) {
     _power = MAX_PWM_VALUE;
-    digitalWrite(_pin, HIGH);
+    _int_power = MAX_PWM_VALUE;
+    analogWrite(_pin, MAX_PWM_VALUE);
+    _status = LIGHT_ON;
   } else if (_power <= 0) {
     _power = 0;
-    digitalWrite(_pin, LOW);
+    _int_power = 0;
+    analogWrite(_pin, 0);
+    _status = LIGHT_OFF;
   } else {
-    analogWrite(_pin, int(_power));
+    if (_int_power != int(_power)) {
+        _int_power = int(_power);
+        analogWrite(_pin, _int_power);
+    }
   }
 #ifdef DEBUG
   Serial.print("pwm: ");
@@ -125,64 +128,24 @@ int ledLight::control(uint16_t val) {
   }
 }
 
-void ledLight::incPower(float v) {
-  if (v >= 0 && v <= MAX_PWM_VALUE) {
-    _power += v;
-    if (_power >= MAX_PWM_VALUE) {
-      _power = MAX_PWM_VALUE;
-    }
-  } else {
-    _power = MAX_PWM_VALUE;
-  }
-  if (int(_power) >= MAX_PWM_VALUE) {
-    _power = MAX_PWM_VALUE;
-    digitalWrite(_pin, HIGH);
-  } else {
-    analogWrite(_pin, int(_power));
-  }
-#ifdef DEBUG
-  Serial.print("pwm: ");
-  Serial.println(_power);
-  Serial.print("status: ");
-  Serial.println(_status);
-#endif
-}
-
-void ledLight::decPower(float v) {
-  if (v >= 0 && v <= MAX_PWM_VALUE) {
-    _power -= v;
-    if (_power <= 0 ) {
-      _power = 0;
-    }
-  } else {
-    _power = 0;
-  }
-  if ((int)_power <= 0) {
-    digitalWrite(_pin, LOW);
-  } else {
-    analogWrite(_pin, int(_power));
-  }
-#ifdef DEBUG
-  Serial.print("pwm: ");
-  Serial.println(_power);
-  Serial.print("status: ");
-  Serial.println(_status);
-#endif
-}
-
-
 // hh:mm時点で点灯すべきかどうかを判断する．1秒毎に呼び出される．
-void ledLight::control(int hh, int mm) {
+int ledLight::control(int hh, int mm) {
   if (_status == LIGHT_TURNING_ON) {
-    incPower(float(MAX_PWM_VALUE) / float(_dim));
-    if (_power == MAX_PWM_VALUE) {
+    _power = _power + (float(MAX_PWM_VALUE) / float(_dim));
+    if (_power >= MAX_PWM_VALUE) {
+      power(MAX_PWM_VALUE);
       _status = LIGHT_ON;
+    } else {
+      power(_power);
     }
   }
   else if (_status == LIGHT_TURNING_OFF) {
-    decPower(float(MAX_PWM_VALUE) / float(_dim));
-    if (_power == 0) {
+    _power = _power - (float(MAX_PWM_VALUE) / float(_dim));
+    if (_power <= 0) {
+      power(0);
       _status = LIGHT_OFF;
+    } else {
+      power(_power);
     }
   }
   else if (_enable_schedule) {
@@ -230,4 +193,5 @@ void ledLight::control(int hh, int mm) {
     }
     _reset_flag = 0;
   }
+  return _status;
 }

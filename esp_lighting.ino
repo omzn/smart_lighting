@@ -20,6 +20,7 @@
 #include <FS.h>
 #include "ntp.h"
 #include "ledlight.h"
+#include "SF_s7s_hw.h"
 
 const String website_name  = "esplight";
 const char* apSSID         = "WIFI_LIGHT_TAN";
@@ -30,20 +31,20 @@ String ssidList;
 uint32_t timer_count = 0;
 
 uint32_t p_millis;
+int prev_m = 0;
+int prev_s = 0;
+
 DNSServer dnsServer;
 MDNSResponder mdns;
-
 const IPAddress apIP(192, 168, 1, 1);
 ESP8266WebServer webServer(80);
 
 RTC_Millis rtc;
 
-//const char* timeServer     = "ntp.nict.jp";
-//byte packetBuffer[NTP_PACKET_SIZE];
-//WiFiUDP udp;
 NTP ntp("ntp.nict.jp");
-
 ledLight light(PIN_LIGHT);
+//S7S s7s(PIN_RX, PIN_TX);
+S7S s7s;
 
 /* Setup and loop */
 
@@ -51,13 +52,23 @@ void setup() {
   pinMode(PIN_LIGHT, OUTPUT);
   digitalWrite(PIN_LIGHT, LOW);
 
+  analogWriteRange(MAX_PWM_VALUE);
+  analogWriteFreq(200);
+
   p_millis = millis();
 #ifdef DEBUG
   Serial.begin(115200);
+#else
+  Serial.begin(9600);
 #endif
   EEPROM.begin(512);
   delay(10);
 
+//  s7s.begin(9600);
+  s7s.clearDisplay();
+  s7s.setBrightness(255);
+  s7s.print("-HI-");
+  
   SPIFFS.begin();
   rtc.begin(DateTime(2017, 1, 1, 0, 0, 0));
 #ifdef DEBUG
@@ -75,20 +86,15 @@ void setup() {
 #endif
       }
       settingMode = false;
-
-      ntp.begin();
-      //udp.begin(UDP_LOCAL_PORT);
-
-      startWebServer_normal();
-      return;
     } else {
       settingMode = true;
     }
   } else {
     settingMode = true;
   }
-
   if (settingMode == true) {
+    s7s.print("SET ");
+    delay(500);
 #ifdef DEBUG
     Serial.println("Setting mode");
 #endif
@@ -114,11 +120,20 @@ void setup() {
     Serial.print(apSSID);
     Serial.println("\"");
 #endif
+  } else {
+    s7s.print("noro");
+    ntp.begin();
+    delay(500);
+    startWebServer_normal();
+#ifdef DEBUG
+    Serial.println("Starting normal operation.");
+#endif
   }
-  ESP.wdtEnable(100);
+  //ESP.wdtEnable(100);
 }
 
 void loop() {
+  
   ESP.wdtFeed();
   if (settingMode) {
     dnsServer.processNextRequest();
@@ -139,9 +154,32 @@ void loop() {
       Serial.println(epoch);
 #endif
     }
-    DateTime now = rtc.now();
-    light.control(now.hour(), now.minute());
+    if (!settingMode) {
+      DateTime now = rtc.now();
+      int st = light.control(now.hour(), now.minute());
+      if (st == LIGHT_ON) {
+        if (prev_m != now.minute()) {
+          s7s.clearDisplay();
+          s7s.setBrightness(255);
+          s7s.printTime(timestamp_s7s());
+        }
+      } else if (st == LIGHT_OFF) {
+        if (prev_m != now.minute()) {
+          s7s.clearDisplay();
+          s7s.setBrightness(127);
+          s7s.printTime(timestamp_s7s());
+        }
+      } else {
+        if (prev_s != st) {
+          s7s.clearDisplay();
+          s7s.setBrightness(255);
+//          s7s.print4d(light.power());
+          s7s.print("dirn");
+        }
+      }
+      prev_m = now.minute();
 
+    }
     timer_count++;
     timer_count %= (86400UL);
   }
@@ -384,6 +422,7 @@ void startWebServer_normal() {
   webServer.on("/reboot", handleReboot);
   webServer.on("/on", handleActionOn);
   webServer.on("/off", handleActionOff);
+  webServer.on("/power", handleActionPower);
   webServer.on("/status", handleStatus);
   webServer.on("/schedule", handleSchedule);
   webServer.begin();
@@ -412,6 +451,26 @@ void handleActionOn() {
   JsonObject& json = jsonBuffer.createObject();
 
   int err = light.control(MAX_PWM_VALUE);
+  if (err < 0) {
+    json["error"] = "Cannot turn on/off light while schedule is set.";
+  }
+  json["power"] = light.power();
+  json["status"] = light.status();
+  json["timestamp"] = timestamp();  
+  json.printTo(message);
+  webServer.send(200, "application/json", message);
+}
+
+void handleActionPower() {
+  String message;
+
+  // on
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& json = jsonBuffer.createObject();
+
+  int p = webServer.arg("value").toInt();
+
+  int err = light.control(p);
   if (err < 0) {
     json["error"] = "Cannot turn on/off light while schedule is set.";
   }
@@ -514,6 +573,15 @@ void handleStatus() {
   json["timestamp"] = timestamp();  
   json.printTo(message);
   webServer.send(200, "application/json", message);
+}
+
+String timestamp_s7s() {
+  String ts;
+  DateTime now = rtc.now();
+  char str[20];
+  sprintf(str,"%02d%02d",now.hour(),now.minute());
+  ts = str;
+  return ts; 
 }
 
 String timestamp() {

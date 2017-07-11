@@ -14,14 +14,12 @@ class ledLight {
     int  schedule();
     void schedule(int v);
     void schedule(int on_h, int on_m, int off_h, int off_m);
-    void control(int hh, int mm);
+    int control(int hh, int mm);
     int control(uint16_t v);
     uint16_t dim();
     void dim(int v);
     int power();
-    void power(int v);
-    void incPower(float v);
-    void decPower(float v);
+    void power(float v);
     int on_h();
     int on_m();
     int off_h();
@@ -37,6 +35,7 @@ class ledLight {
     uint16_t _dim = 10;
     uint8_t _pin;
     float _power; 
+    int _int_power;
     int _on_h;
     int _on_m;
     int _off_h;
