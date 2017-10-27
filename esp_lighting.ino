@@ -22,6 +22,8 @@
 #include "ledlight.h"
 #include "SF_s7s_hw.h"
 
+const String boolstr[2] = {"false","true"};
+
 const String website_name  = "esplight";
 const char* apSSID         = "WIFI_LIGHT_TAN";
 String sitename;
@@ -43,7 +45,6 @@ RTC_Millis rtc;
 
 NTP ntp("ntp.nict.jp");
 ledLight light(PIN_LIGHT);
-//S7S s7s(PIN_RX, PIN_TX);
 S7S s7s;
 
 /* Setup and loop */
@@ -170,12 +171,12 @@ void loop() {
           s7s.printTime(timestamp_s7s());
         }
       } else {
-        if (prev_s != st) {
+//        if (prev_s != st) {
           s7s.clearDisplay();
           s7s.setBrightness(255);
-//          s7s.print4d(light.power());
-          s7s.print("dirn");
-        }
+          s7s.print4d(light.power());
+//          s7s.print("dirn");
+//        }
       }
       prev_m = now.minute();
 
@@ -246,7 +247,7 @@ boolean restoreConfig() {
     }
 
     int e_schedule  = EEPROM.read(EEPROM_SCHEDULE_ADDR) == 1 ? 1 : 0;
-    light.schedule(e_schedule == 0 ? 0 : 1);
+    light.enable(e_schedule == 0 ? 0 : 1);
 
     int e_on_h  = EEPROM.read(EEPROM_SCHEDULE_ADDR + 1);
     int e_on_m  = EEPROM.read(EEPROM_SCHEDULE_ADDR + 2);
@@ -258,7 +259,7 @@ boolean restoreConfig() {
     light.dim(e_dim);
 #ifdef DEBUG
     Serial.print("schedule:");
-    Serial.println(light.schedule());
+    Serial.println(light.enable());
     Serial.print("dim:");
     Serial.println(light.dim());
     Serial.print("schedule: ");
@@ -424,7 +425,7 @@ void startWebServer_normal() {
   webServer.on("/off", handleActionOff);
   webServer.on("/power", handleActionPower);
   webServer.on("/status", handleStatus);
-  webServer.on("/schedule", handleSchedule);
+  webServer.on("/config", handleConfig);
   webServer.begin();
 }
 
@@ -498,9 +499,9 @@ void handleActionOff() {
   webServer.send(200, "application/json", message);
 }
 
-void handleSchedule() {
+void handleConfig() {
   String message,argname,argv;
-  int enable,on_h,on_m,off_h,off_m,dim;
+  int en,on_h,on_m,off_h,off_m,dim;
   DynamicJsonBuffer jsonBuffer;
   JsonObject& json = jsonBuffer.createObject();
 
@@ -516,9 +517,9 @@ void handleSchedule() {
     Serial.println(argv);
 #endif
     if (argname == "enable") {
-       enable = argv ==  "true" ? 1 : 0;
-       light.schedule(enable);
-       EEPROM.write(EEPROM_SCHEDULE_ADDR, char(light.schedule()));
+       en = argv ==  "true" ? 1 : 0;
+       light.enable(en);
+       EEPROM.write(EEPROM_SCHEDULE_ADDR, char(light.enable()));
        EEPROM.commit();
    } else if (argname == "on_h") {
        on_h  = argv.toInt();
@@ -546,7 +547,7 @@ void handleSchedule() {
     EEPROM.commit();
   }
   
-  json["enable_schedule"] = light.schedule();
+  json["enable"] = boolstr[light.enable()];
   json["dim"] = light.dim();
   json["on_h"] = light.on_h();
   json["on_m"] = light.on_m();
@@ -564,12 +565,6 @@ void handleStatus() {
   JsonObject& json = jsonBuffer.createObject();
   json["power"] = light.power();
   json["status"] = light.status();
-  json["enable_schedule"] = light.schedule();
-  json["dim"] = light.dim();
-  json["on_h"] = light.on_h();
-  json["on_m"] = light.on_m();
-  json["off_h"] = light.off_h();
-  json["off_m"] = light.off_m();
   json["timestamp"] = timestamp();  
   json.printTo(message);
   webServer.send(200, "application/json", message);

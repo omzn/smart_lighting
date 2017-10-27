@@ -11,8 +11,8 @@ class ledLight {
   public:
     ledLight(uint8_t pin);
 
-    int  schedule();
-    void schedule(int v);
+    int  enable();
+    void enable(int v);
     void schedule(int on_h, int on_m, int off_h, int off_m);
     int control(int hh, int mm);
     int control(uint16_t v);

@@ -12,13 +12,13 @@ uint8_t ledLight::status() {
   return _status;
 }
 
-int ledLight::schedule() {
+int ledLight::enable() {
   return _enable_schedule;
 }
 
 
 // スケジュールを有効(1)・無効(0)にする．
-void ledLight::schedule(int v) {
+void ledLight::enable(int v) {
   _enable_schedule = (v == 0 ? 0 : 1);
 }
 

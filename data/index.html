@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WiFi Aqua-tan LED Light</title>
+<title>Aqua-tan Smart Light</title>
 <link rel="stylesheet" href="./pure.css">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/grids-responsive-min.css">
@@ -12,7 +12,7 @@
 <div class="p-m pure-menu-horizontal pure-menu-scrollable pm-fix">
   <a href="#" class="pure-menu-heading"><img width='32' height='32' title='' alt='' src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IB2cksfwAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAACXBIWXMAAAsTAAALEwEAmpwYAAABWWlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNS40LjAiPgogICA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogICAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgICAgICB4bWxuczp0aWZmPSJodHRwOi8vbnMuYWRvYmUuY29tL3RpZmYvMS4wLyI+CiAgICAgICAgIDx0aWZmOk9yaWVudGF0aW9uPjE8L3RpZmY6T3JpZW50YXRpb24+CiAgICAgIDwvcmRmOkRlc2NyaXB0aW9uPgogICA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgpMwidZAAABnklEQVRYCb2XUVLEMAxDW4b7X7mgwssorp2mtDQzYMeWJcW7fLBs27bo56VzEPp4SVgyEl9/o+77+SSZiAf3xYxEdCKeOib2+6yBSCYBCJX7AVv1HbuMDEDUDdhF/SjCTKzbWJ9W34FZInCwSnhaXEOjDUBEFD4KqnbrZBuQiIu6QFYX/oqxjj8z4IJZLhOVkQw/NBcNAFYkz0hVmzURcbo3bjegopo+gJE28N3341jqzHCPseNyAw7ESCbgOOVgY70TsmbHGf8KsiEGsh4GPDqOHA7z8ZNWG3CgSCDyOjl9MJkYPWZanDHQwBMJQpUJzLa+fwQUIYl6Z33wmhcWvNfJW3x6AxDzUu6KGCLuPd+Ag5/K4zY7cYn81wamH3BlA/E10yIj4JsbOKxfxqoNZOA7G8j49sVkGxA4EytJdqb613ButIHMRC2Td4biGsk2ANXpMMA/Rj1wqzYAp0z4JtyU18HHeIZZRxuIZE/f98ecbSCKnr0o4qt72+RVAxXhTL2JOvjMwJ0Xp4Iurvzud6ASqepRf1lf/Nf8IK7CF5KQSk/UTlbbAAAAAElFTkSuQmCC'></a>
   <ul class="pure-menu-list">
-    <li class="pure-menu-item"><a href="#" class="pure-menu-link">WiFi Aqua-tan LED Light</a></li>
+    <li class="pure-menu-item"><a href="#" class="pure-menu-link">Aqua-tan Smart Light</a></li>
   </ul>  
 </div>
 
@@ -42,7 +42,7 @@
           <h3 class="if-head">Auto lighting schedule</h3>
           <p>Set the lighting schedule.</p>
           <p>
-	    <form name="/schedule" id="frm_sch" class="pure-form pure-form-stacked">
+	    <form id="config" class="pure-form pure-form-stacked">
 	      <fieldset>
 		<legend>Scheduler</legend>
 		<div class="pure-g">
@@ -124,14 +124,14 @@
 </div> <!-- end l-content -->
 <div class="footer l-box">
     <p>
-        WiFi Aqua-tan LED Light by @omzn 2017 / All rights researved
+        Aqua-tan Smart Light by @omzn 2017 / All rights researved
     </p>
 </div>
 <script type="text/javascript">
 
-$('form#frm_sch').submit(
+$('form#config').submit(
     function(ev) {
-	$.post('/schedule',
+	$.post('/config',
                 "enable="+$('#enable').prop('checked').toString()
                +"&on_h="+$('#on_h').val()
                +"&on_m="+$('#on_m').val()
@@ -144,7 +144,7 @@ $('form#frm_sch').submit(
     });
 
 function read(json) {
-    if (json.enable_schedule == 1) {
+    if (json.enable == "true") {
 	$('#enable').prop("checked",true);
     } else {
 	$('#enable').prop("checked",false);
@@ -158,7 +158,7 @@ function read(json) {
 
 function update() {
     $.getJSON('/status',function(json){
-        if (json.enable_schedule == 1) { 
+        if (json.enable == "true") { 
     	    $('#enable').prop("checked",true);
         } else {
 	    $('#enable').prop("checked",false);
@@ -177,7 +177,7 @@ function update() {
 }
 
 function confset() {
-    $.getJSON('/status',function(json){
+    $.getJSON('/config',function(json){
 	read(json);
 	if($('#enable').is(":checked")){
 	    $('#on_h').prop('disabled', false);
@@ -203,7 +203,7 @@ $(function() {
 	    $('#on_m').prop('disabled', false);
 	    $('#off_h').prop('disabled', false);
 	    $('#off_m').prop('disabled', false);
-	    $.post('/schedule',
+	    $.post('/config',
 		   "enable="+$('#enable').prop('checked').toString(),
 		   read,"json");
 	} else if($(this).is(":not(:checked)")){
@@ -212,7 +212,7 @@ $(function() {
 	    $('#on_m').prop('disabled', true);
 	    $('#off_h').prop('disabled', true);
 	    $('#off_m').prop('disabled', true);
-	    $.post('/schedule',
+	    $.post('/config',
 		   "enable="+$('#enable').prop('checked').toString(),
 		   read,"json");
 	}

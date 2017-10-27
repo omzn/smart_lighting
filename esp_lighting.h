@@ -5,9 +5,12 @@
 
 //#define PIN_SDA          (2)
 //#define PIN_SCL          (5)
+
 #define PIN_LIGHT         (15)
-#define PIN_RX             (4)
-#define PIN_TX            (13)
+// pin #15 is hw pulled down
+
+//#define PIN_RX             (4)
+//#define PIN_TX            (13)
 //#define PIN_TFT_DC       (4)
 //#define PIN_TFT_CS      (15)
 //#define PIN_SD_CS       (16)
