@@ -1,6 +1,22 @@
 /*
-   ESP-WROOM-02 remote light manager
-   MPU:  ESP-WROOM-02
+   Aqua-tan smart light manager
+
+   API
+
+   /on
+      power=(int)
+   /off
+   /status
+   /config
+      enable=[true|false]
+      on_h=(int)
+      on_m=(int)
+      off_h=(int)
+      off_m=(int)
+      dim=(int)
+   /wifireset
+   /reset
+   /reboot
 */
 
 #include "esp_lighting.h" // Configuration parameters
@@ -423,7 +439,7 @@ void startWebServer_normal() {
   webServer.on("/reboot", handleReboot);
   webServer.on("/on", handleActionOn);
   webServer.on("/off", handleActionOff);
-  webServer.on("/power", handleActionPower);
+//  webServer.on("/power", handleActionPower);
   webServer.on("/status", handleStatus);
   webServer.on("/config", handleConfig);
   webServer.begin();
@@ -445,13 +461,25 @@ void handleReboot() {
 }
 
 void handleActionOn() {
-  String message;
+  String message, argname, argv;
+  int p = -1,err;
 
   // on
   DynamicJsonBuffer jsonBuffer;
   JsonObject& json = jsonBuffer.createObject();
 
-  int err = light.control(MAX_PWM_VALUE);
+  for (int i = 0; i < webServer.args(); i++) {
+    argname = webServer.argName(i);
+    argv = webServer.arg(i);
+    if (argname == "power") {
+      p = argv.toInt();
+    }
+  }
+  if (p >= 0) {
+    err = light.control(p);
+  } else {
+    err = light.control(MAX_PWM_VALUE);    
+  }
   if (err < 0) {
     json["error"] = "Cannot turn on/off light while schedule is set.";
   }
@@ -517,7 +545,7 @@ void handleConfig() {
     Serial.println(argv);
 #endif
     if (argname == "enable") {
-       en = argv ==  "true" ? 1 : 0;
+       en = (argv ==  "true" ? 1 : 0);
        light.enable(en);
        EEPROM.write(EEPROM_SCHEDULE_ADDR, char(light.enable()));
        EEPROM.commit();

@@ -158,11 +158,6 @@ function read(json) {
 
 function update() {
     $.getJSON('/status',function(json){
-        if (json.enable == "true") { 
-    	    $('#enable').prop("checked",true);
-        } else {
-	    $('#enable').prop("checked",false);
-        }
 	if ( json.status == 3) {
 	    $('#ls').html("Turn ON");
         } else if (json.status == 2) {
