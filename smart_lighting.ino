@@ -1,5 +1,6 @@
 /*
    Aqua-tan smart light manager
+   v2.0b
 
    API
 
@@ -14,6 +15,8 @@
       off_h=(int)
       off_m=(int)
       dim=(int)
+      time[1-10]=(hh:mm)
+      power[1-10]=(int)
    /wifireset
    /reset
    /reboot
