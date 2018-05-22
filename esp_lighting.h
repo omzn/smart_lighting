@@ -23,10 +23,9 @@
 #define EEPROM_MDNS_ADDR            (96)
 #define EEPROM_SCHEDULE_ADDR       (128)
 #define EEPROM_DIM_ADDR            (133)
-#define EEPROM_LAST_ADDR           (135)
+#define EEPROM_MAX_ADDR            (135)
+#define EEPROM_LAST_ADDR           (137)
 
-#define UDP_LOCAL_PORT      (2390)
-#define NTP_PACKET_SIZE       (48)
 #define SECONDS_UTC_TO_JST (32400)
 
 #endif

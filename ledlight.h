@@ -19,6 +19,8 @@ class ledLight {
     uint16_t dim();
     void dim(int v);
     int power();
+    int max_power();
+    void max_power(int v);
     void power(float v);
     int on_h();
     int on_m();
@@ -30,6 +32,7 @@ class ledLight {
     void off_m(int v);
     uint8_t status();
   protected:
+    uint16_t _max_pwm_value = MAX_PWM_VALUE;
     uint8_t _enable_schedule;
     uint8_t _status; 
     uint16_t _dim = 10;

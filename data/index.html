@@ -5,10 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Aqua-tan Smart Light</title>
 <link rel="stylesheet" href="./pure.css">
-<link rel="stylesheet" href="rangeslider.css"> 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
-<!-- <script src="./jquery.range.js"></script -->
-<script src="rangeslider.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/grids-responsive-min.css">
 </head>
 <body>
@@ -36,7 +33,7 @@
     </div>
 
   </div>
-
+  
   <div id="settings">
 
     <div id="sec_sch" class="if pure-g">
@@ -53,15 +50,15 @@
 		    <input id="enable" value="1" type="checkbox"> Enable
 		  </div>
 		</div>
-		<legend>Time and brightness</legend>
+		<legend>Turn on time</legend>
 		<div class="pure-g">
-		  <div class="pure-u-1 pure-u-md-2-5">
-		    <input id="time1" class="pure-u-22-24" type="text" placeholder="HH:MM">
+		  <div class="pure-u-1 pure-u-md-1-5">
+		    <input id="on_h" class="pure-u-22-24" type="text">
 		  </div>
 		  <div class="pure-u-1 pure-u-md-1-5">
-		    <input class="rangeslider" id="power1" type="range" value="0" min="0" max="1023" >
+		    <input id="on_m" class="pure-u-22-24" type="text">
 		  </div>
-		  <div class="pure-u-1 pure-u-md-2-5">
+		  <div class="pure-u-1 pure-u-md-3-5">
 		  </div>
 		</div>
 		<legend>Turn off time</legend>
@@ -76,7 +73,14 @@
 		  </div>
 		</div>
 
-		<legend>Turn on/off duration (0 is immediate.)</legend>
+		<legend>Maximum LED power (up to 1023)</legend>
+		<div class="pure-g">
+		  <div class="pure-u-1 pure-u-md-1-5">
+		    <input id="max_power" class="pure-u-22-24" type="text" >
+		  </div>
+		</div>
+
+		<legend>Turn on/off duration (seconds: 0 is immediate.)</legend>
 		<div class="pure-g">
 		  <div class="pure-u-1 pure-u-md-1-5">
 		    <input id="dim" class="pure-u-22-24" type="text" >
@@ -127,7 +131,7 @@
 </div> <!-- end l-content -->
 <div class="footer l-box">
     <p>
-        Aqua-tan Smart Light by @omzn 2017 / All rights researved
+        Aqua-tan Smart Light by @omzn 2017-2018 / All rights researved
     </p>
 </div>
 <script type="text/javascript">
@@ -140,6 +144,7 @@ $('form#config').submit(
                +"&on_m="+$('#on_m').val()
                +"&off_h="+$('#off_h').val()
                +"&off_m="+$('#off_m').val()
+               +"&max_power="+$('#max_power').val()
                +"&dim="+$('#dim').val(),
 	       read,"json");
 	$('#sch_sub').prop('disabled', true);
@@ -156,6 +161,7 @@ function read(json) {
     $('#on_m').val(json.on_m);
     $('#off_h').val(json.off_h);
     $('#off_m').val(json.off_m);
+    $('#max_power').val(json.max_power);
     $('#dim').val(json.dim);
 }
 
@@ -194,10 +200,7 @@ function confset() {
 }
 
 $(function() {
-
-    $('input[type="range"]').rangeslider();
-    $('#power1').rangeslider();
-
+    
     $('#enable').click(function(){
 	if($(this).is(":checked")){
 	    $('#on_h').prop('disabled', false);
@@ -245,15 +248,21 @@ $(function() {
 	}
     });
 
+    $('#max_power').keyup(function() {
+	if($(this).val() != '') {
+	    $('#sch_sub').prop('disabled', false);
+	}
+    });
+
     $('#dim').keyup(function() {
 	if($(this).val() != '') {
 	    $('#sch_sub').prop('disabled', false);
 	}
     });
 
-//    confset();
-//    update();
-//    setInterval("update()",15000);
+    confset();
+    update();
+    setInterval("update()",15000);
 });
 
 </script>
