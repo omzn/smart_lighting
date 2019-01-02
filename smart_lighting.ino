@@ -38,28 +38,33 @@
 #include <ArduinoJson.h>
 #include <RTClib.h>
 #include <FS.h>
+#include <ArduinoOTA.h>
 #include "ntp.h"
 #include "ledlight.h"
 #include "SF_s7s_hw.h"
 
 const String boolstr[2] = {"false","true"};
 
-const String website_name  = "esplight";
+String website_name  = "aqualight";
 const char* apSSID         = "WIFI_LIGHT_TAN";
-String sitename;
 boolean settingMode;
 String ssidList;
+
+const char* localserver = "mowatmirror.local";
+const int localport = 3000;
+
 
 uint32_t timer_count = 0;
 
 uint32_t p_millis;
 int prev_m = 0;
-int prev_s = 0;
+int prev_s = -1;
 
 DNSServer dnsServer;
 MDNSResponder mdns;
 const IPAddress apIP(192, 168, 1, 1);
 ESP8266WebServer webServer(80);
+WiFiClient client;
 
 RTC_Millis rtc;
 
@@ -70,7 +75,6 @@ S7S s7s;
 /* Setup and loop */
 
 void setup() {
-
   ESP.wdtDisable();
   pinMode(PIN_LIGHT, OUTPUT);
   digitalWrite(PIN_LIGHT, LOW);
@@ -97,25 +101,18 @@ void setup() {
 #ifdef DEBUG
   Serial.println("RTC began");
 #endif
-  sitename = website_name;
 
+  settingMode = true;
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
   if (restoreConfig()) {
     if (checkConnection()) {
-      if (mdns.begin(sitename.c_str(), WiFi.localIP())) {
-#ifdef DEBUG
-        Serial.println("MDNS responder started.");
-#endif
-      }
+      setupArduinoOTA();
       settingMode = false;
-    } else {
-      settingMode = true;
     }
-  } else {
-    settingMode = true;
   }
   if (settingMode == true) {
+    s7s.clearDisplay();
     s7s.print("SET ");
     delay(500);
 #ifdef DEBUG
@@ -144,10 +141,12 @@ void setup() {
     Serial.println("\"");
 #endif
   } else {
-    s7s.print("noro");
+    s7s.clearDisplay();
+    s7s.print("norl");
     ntp.begin();
-    delay(500);
-    startWebServer_normal();
+    delay(250);
+    s7s.clearDisplay();
+  startWebServer_normal();
 #ifdef DEBUG
     Serial.println("Starting normal operation.");
 #endif
@@ -156,10 +155,11 @@ void setup() {
 }
 
 void loop() {
-  
   ESP.wdtFeed();
   if (settingMode) {
     dnsServer.processNextRequest();
+  } else {
+    ArduinoOTA.handle();
   }
   webServer.handleClient();
 
@@ -181,12 +181,18 @@ void loop() {
       DateTime now = rtc.now();
       int st = light.control(now.hour(), now.minute());
       if (st == LIGHT_ON) {
+        if (prev_s != st) {
+          post_data(5, "light", st);          
+        }
         if (prev_m != now.minute()) {
           s7s.clearDisplay();
           s7s.setBrightness(255);
           s7s.printTime(timestamp_s7s());
         }
       } else if (st == LIGHT_OFF) {
+        if (prev_s != st) {
+          post_data(5, "light", st);          
+        }
         if (prev_m != now.minute()) {
           s7s.clearDisplay();
           s7s.setBrightness(127);
@@ -201,13 +207,39 @@ void loop() {
 //        }
       }
       prev_m = now.minute();
-
+      prev_s = st;
     }
     timer_count++;
     timer_count %= (86400UL);
   }
   delay(10);
 }
+
+void post_data(int room, String label, float value) {
+  if (client.connect(localserver, localport)) {
+    // Create HTTP POST Data
+    String postData;
+    char str[64];
+
+    //    postData = "room=" + String(room) + "&label=" + label + "&value=" + value;
+    sprintf(str, "room=%d&label=%s&value=%4.1f", room, label.c_str(), value);
+    postData += str;
+
+    client.print("POST /api/v1/add HTTP/1.1\n");
+    client.print("Host: ");
+    client.print(localserver);
+    client.print("\n");
+    client.print("Connection: close\n");
+    client.print("Content-Type: application/x-www-form-urlencoded\n");
+    client.print("Content-Length: ");
+    client.print(postData.length());
+    client.print("\n\n");
+
+    client.print(postData);
+    client.stop();
+  }
+}
+
 
 /***************************************************************
    EEPROM restoring functions
@@ -258,13 +290,13 @@ boolean restoreConfig() {
 #endif
     delay(100);
     if (EEPROM.read(EEPROM_MDNS_ADDR) != 0) {
-      sitename = "";
+      website_name = "";
       for (int i = 0; i < 32; ++i) {
         byte c = EEPROM.read(EEPROM_MDNS_ADDR + i);
         if (c == 0) {
           break;
         }
-        sitename += char(c);
+        website_name += char(c);
       }
     }
 
@@ -374,6 +406,10 @@ void startWebServer_setting() {
     s += "<script>function quitBox() { open(location, '_self').close();return false;};setTimeout(\"quitBox()\",10000);</script>";
     webServer.send(200, "text/html", makePage("Wi-Fi Settings", s));
     timer_count = 0;
+    ESP.restart();
+    while (1) {
+      delay(0);
+    }
   });
   webServer.onNotFound([]() {
 #ifdef DEBUG
@@ -430,6 +466,10 @@ void startWebServer_normal() {
     s += "<script>function quitBox() { open(location, '_self').close();return false;};</script>";
     webServer.send(200, "text/html", makePage("Reset ALL Settings", s));
     timer_count = 0;
+    ESP.restart();
+    while (1) {
+      delay(0);
+    }
   });
   webServer.on("/wifireset", []() {
     for (int i = 0; i < EEPROM_MDNS_ADDR; ++i) {
@@ -441,6 +481,10 @@ void startWebServer_normal() {
     s += "<script>function quitBox() { open(location, '_self').close();return false;}</script>";
     webServer.send(200, "text/html", makePage("Reset WiFi Settings", s));
     timer_count = 0;
+    ESP.restart();
+    while (1) {
+      delay(0);
+    }
   });
   webServer.on("/", handleRoot);
   webServer.on("/pure.css", handleCss);
@@ -464,7 +508,10 @@ void handleReboot() {
   String message;
   message = "{reboot:\"done\"}";
   webServer.send(200, "application/json", message);
-  ESP.restart();
+    ESP.restart();
+    while (1) {
+      delay(0);
+    }
 }
 
 void handleActionOn() {
@@ -677,3 +724,39 @@ String urlDecode(String input) {
   return s;
 }
 
+void setupArduinoOTA() {
+  ArduinoOTA.setPort(8266);
+  // Hostname defaults to esp8266-[ChipID]
+  ArduinoOTA.setHostname(website_name.c_str());
+  ArduinoOTA.onStart([]() {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH) {
+      type = "sketch";
+    } else { // U_SPIFFS
+      type = "filesystem";
+    }
+    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS
+    // using SPIFFS.end()
+    //Serial.println("Start updating " + type);
+  });
+  ArduinoOTA.onEnd([]() { Serial.println("\nEnd"); });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("%u", (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) {
+      Serial.println("Auth Failed");
+    } else if (error == OTA_BEGIN_ERROR) {
+      Serial.println("Begin Failed");
+    } else if (error == OTA_CONNECT_ERROR) {
+      Serial.println("Connect Failed");
+    } else if (error == OTA_RECEIVE_ERROR) {
+      Serial.println("Receive Failed");
+    } else if (error == OTA_END_ERROR) {
+      Serial.println("End Failed");
+    }
+  });
+  ArduinoOTA.begin();
+  delay(100);
+}

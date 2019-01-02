@@ -5,6 +5,7 @@ ledLight::ledLight(uint8_t pin) {
   _pin = pin;
   _reset_flag = 1;
   _status = 0;
+  _forced_status = 0;
   pinMode(_pin, OUTPUT);
 }
 
@@ -135,7 +136,9 @@ void ledLight::dim(int v) {
 // ライトをvalの強さで光らせる．スケジュールが設定されているときは，-1を返し何もしない．
 int ledLight::control(uint16_t val) {
   if (_enable_schedule) {
-    return -1;
+    _forced_status = val > 0 ? LIGHT_ON : LIGHT_OFF;
+    power(val);
+    return val;
   } else {
     power(val);
     return val;

@@ -35,6 +35,7 @@ class ledLight {
     uint16_t _max_pwm_value = MAX_PWM_VALUE;
     uint8_t _enable_schedule;
     uint8_t _status; 
+    uint8_t _forced_status;
     uint16_t _dim = 10;
     uint8_t _pin;
     float _power; 
