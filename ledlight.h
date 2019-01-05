@@ -14,14 +14,18 @@ class ledLight {
     int  enable();
     void enable(int v);
     void schedule(int on_h, int on_m, int off_h, int off_m);
-    int control(int hh, int mm);
+    int control(int hh, int mm, int ss);
     int control(uint16_t v);
     uint16_t dim();
     void dim(int v);
-    int power();
     int max_power();
     void max_power(int v);
+    int power();
     void power(float v);
+    int brightness();
+    void brightness(float v);
+    uint8_t powerAtTime(uint8_t h, uint8_t m);
+    void powerAtTime(uint8_t val, uint8_t h, uint8_t m);
     int on_h();
     int on_m();
     int off_h();
@@ -45,6 +49,7 @@ class ledLight {
     int _off_h;
     int _off_m;
     int _reset_flag;
+    uint8_t _powerAtTime[144];
 };
 
 #endif
