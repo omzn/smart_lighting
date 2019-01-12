@@ -351,10 +351,11 @@ boolean restoreConfig() {
 
 boolean checkConnection() {
   int count = 0;
-  while (count < 60) {
+  while (count < 10) {
     if (WiFi.status() == WL_CONNECTED) {
       return true;
     }
+    ESP.wdtFeed();
     delay(500);
 #ifdef DEBUG
     Serial.print(".");
@@ -601,8 +602,8 @@ void handleConfig() {
   int en, on_h, on_m, off_h, off_m, dim;
   DynamicJsonBuffer jsonBuffer;
   JsonObject &json = jsonBuffer.createObject();
-  JsonObject &power = jsonBuffer.createObject();
-
+  JsonArray &powerarray = json.createNestedArray("power");
+ 
   on_h = on_m = off_h = off_m = dim = -1;
 
   for (int i = 0; i < webServer.args(); i++) {
@@ -624,7 +625,6 @@ void handleConfig() {
       uint8_t m = argname.substring(5, 6).toInt();
       uint16_t address = hh * 6 + m;
       uint8_t val = argv.toInt();
-      Serial.println("p@t:" + String(hh) + ":" + String(m) + " = " + argv);
       light.powerAtTime(val,hh,m*10);
       EEPROM.write(EEPROM_POWER_ADDR + address, argv.toInt());
       EEPROM.commit();
@@ -638,16 +638,17 @@ void handleConfig() {
   }
 
   for (int jj = 0; jj < 1; jj++) {
+    JsonArray &powerseq = powerarray.createNestedArray();
     for (int j = 0; j < 24; j++) {
       for (int i = 0; i < 60; i += 10) {
         sprintf(buf, "%02d%02d", j, i);
-        power["p" + String(jj) + "_" + buf] = light.powerAtTime(j, i);
+        powerseq.add(light.powerAtTime(j, i));
       }
     }
   }
 
   json["enable"] = boolstr[light.enable()];
-  json["power"] = power;
+//  json["power"] = power;
   json["max_power"] = light.max_power();
   json["timestamp"] = timestamp();
   json.printTo(message);

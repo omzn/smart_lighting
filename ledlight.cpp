@@ -62,17 +62,17 @@ void ledLight::power(float v) {
   if (_power >= _max_pwm_value) {
     _power = _max_pwm_value;
     _int_power = _max_pwm_value;
-    analogWrite(_pin, _max_pwm_value);
+    analogWrite(_pin, _max_pwm_value); // here to be modified
     _status = LIGHT_ON;
   } else if (_power <= 0) {
     _power = 0;
     _int_power = 0;
-    analogWrite(_pin, 0);
+    analogWrite(_pin, 0); // here to be modified
     _status = LIGHT_OFF;
   } else {
     if (_int_power != int(_power)) {
       _int_power = int(_power);
-      analogWrite(_pin, _int_power);
+      analogWrite(_pin, _int_power); // here to be modified
     }
   }
 #ifdef DEBUG
@@ -111,11 +111,11 @@ uint8_t ledLight::powerAtTime(uint8_t h, uint8_t m) {
 
 // ライトをvalの強さで光らせる．スケジュールが設定されているときは，-1を返し何もしない．
 int ledLight::control(uint16_t val) {
-  if (_enable_schedule) {
-    _forced_status = val > 0 ? LIGHT_ON : LIGHT_OFF;
+  if (!_enable_schedule) {
     brightness(val);
     return val;
   } else {
+    _forced_status = val > 0 ? LIGHT_ON : LIGHT_OFF;
     return -1;
   }
 }
@@ -133,8 +133,6 @@ int ledLight::control(int hh, int mm, int ss) {
     next_pwm = map(next_power,0,100,0,_max_pwm_value);
     float diff = (next_pwm - previous_pwm) / 600.0;
     current_pwm = previous_pwm + diff * ((mm % 10)*60 + ss);
-
-    
 
     if (int(current_pwm) != power()) {
       if (current_pwm > 0) {

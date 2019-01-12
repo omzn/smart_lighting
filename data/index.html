@@ -48,600 +48,21 @@
                         <h3 class="if-head">Auto lighting schedule</h3>
                         <p>
                             <form id="config" class="pure-form pure-form-stacked">
-                                <fieldset>
+                                <fieldset id='fsets'>
                                     <legend>Scheduler</legend>
                                     <div class="pure-g">
                                         <div class="pure-u-1 pure-u-md-1-1">
                                             <input id="enable" value="1" type="checkbox"> Enable
                                         </div>
                                     </div>
-                                    <legend>LED0 brightness</legend>
+                                    <legend>LED brightness graph</legend>
                                     <div class="pure-g">
                                         <div class="pure-u-1 pure-u-md-1-1">
                                             <div id="chart2" style="height: 300px; width: 1000px;"></div>
                                             <div id="chart1" style="height: 100px; width: 1000px;"></div>
                                         </div>
                                     </div>
-                                    <legend>LED0 brightness values <button id="sbtn" type="button" class="button-show pure-button">Show
-                                            / Hide</button> </legend>
-                                    <div id="powerlist_0">
-                                        <div class="pure-g">
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    00:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0000" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0010" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0020" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0030" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0040" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0050" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    01:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0100" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0110" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0120" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0130" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0140" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0150" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="pure-g">
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    02:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0200" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0210" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0220" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0230" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0240" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0250" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    03:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0300" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0310" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0320" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0330" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0340" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0350" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="pure-g">
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    04:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0400" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0410" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0420" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0430" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0440" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0450" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    05:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0500" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0510" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0520" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0530" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0540" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0550" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="pure-g">
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    06:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0600" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0610" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0620" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0630" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0640" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0650" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    07:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0700" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0710" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0720" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0730" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0740" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0750" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="pure-g">
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    08:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0800" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0810" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0820" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0830" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0840" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0850" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    09:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0900" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0910" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0920" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0930" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0940" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_0950" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="pure-g">
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    10:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1000" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1010" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1020" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1030" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1040" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1050" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    11:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1100" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1110" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1120" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1130" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1140" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1150" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="pure-g">
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    12:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1200" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1210" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1220" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1230" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1240" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1250" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    13:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1300" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1310" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1320" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1330" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1340" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1350" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="pure-g">
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    14:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1400" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1410" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1420" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1430" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1440" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1450" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    15:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1500" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1510" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1520" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1530" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1540" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1550" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="pure-g">
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    16:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1600" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1610" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1620" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1630" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1640" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1650" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    17:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1700" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1710" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1720" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1730" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1740" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1750" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="pure-g">
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    18:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1800" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1810" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1820" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1830" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1840" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1850" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    19:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1900" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1910" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1920" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1930" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1940" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_1950" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="pure-g">
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    20:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2000" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2010" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2020" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2030" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2040" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2050" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    21:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2100" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2110" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2120" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2130" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2140" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2150" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="pure-g">
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    22:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2200" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2210" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2220" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2230" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2240" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2250" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                            <div class="pure-u-1 pure-u-md-1-2">
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    23:00
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2300" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2310" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2320" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2330" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2340" class="pure-u-22-24" type="text">
-                                                </div>
-                                                <div class="pure-u-1 pure-u-md-1-8">
-                                                    <input id="p0_2350" class="pure-u-22-24" type="text">
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                   <!-- -->
                                     <button id="sch_sub" type="submit" class="pure-button pure-button-primary">Submit</button>
                                 </fieldset>
                             </form>
@@ -649,7 +70,9 @@
                     </div>
                 </div>
                 <div class="pure-u-1 pureu-md-1-1">
-                    <button id="advbtn" type="button" class="button-adv pure-button">Show advanced settings</button>
+                    <div class="l-box">
+                        <button id="advbtn" type="button" class="button-adv pure-button">Advanced settings</button>
+                    </div>
                 </div>
                 <div id="advanced-settings">
                     <div class="pure-u-1 pure-u-md-1-2">
@@ -681,8 +104,9 @@
                     </div>
                 </div>
                 <div class="pure-u-1 pureu-md-1-1">
+                    &nbsp;
                 </div>
-                </div> <!-- end if -->
+            </div> <!-- end if -->
         </div> <!-- end setting -->
     </div> <!-- end l-content -->
     <div class="footer l-box">
@@ -693,12 +117,31 @@
     <script type="text/javascript">
         var targetPlot, controllerPlot;
 
-        $('#powerlist_0').hide();
-        $('#advanced-settings').hide();
+        var numberOfLEDs = 1;
 
-        $('#sbtn').click(function () {
-            $('#powerlist_0').toggle();
-        });
+        // make LED power form (this is a source of the graph)
+        for (var jj = 0; jj < numberOfLEDs; jj++) {
+            $('#fsets').append("<legend>LED" + jj.toString() + " values <button id='sbtn" + jj.toString() + "' type='button' class='button-show pure-button'>Show / Hide</button></legend>");
+            $('#fsets').append("<div id='powerlist_" + jj.toString() + "'>");
+            for (var j = 0; j < 24; j += 2) {
+                var f2 = ('00' + j).slice(-2);
+                var l2 = ('00' + (j + 1)).slice(-2);
+                $('#powerlist_' + jj.toString()).append("<div id='v" + f2 + l2 + "' class='pure-g'></div>");
+                $('#v' + f2 + l2).append("<div id='v" + f2 + "' class='pure-u-1 pure-u-md-1-2'></div>");
+                $('#v' + f2 + l2).append("<div id='v" + l2 + "' class='pure-u-1 pure-u-md-1-2'></div>");
+                $('#v' + f2).append("<div class='pure-u-1 pure-u-md-1-8'>" + f2 + ":</div>");
+                $('#v' + l2).append("<div class='pure-u-1 pure-u-md-1-8'>" + l2 + ":</div>");
+                for (var i = 0; i < 60; i += 10) {
+                    $('#v' + f2).append("<div class='pure-u-1 pure-u-md-1-8'><input id='p" + jj.toString() + "_" + f2 + ('00' + i).slice(-2) + "' class='pure-u-22-24' type='text'></div>");
+                    $('#v' + l2).append("<div class='pure-u-1 pure-u-md-1-8'><input id='p" + jj.toString() + "_" + l2 + ('00' + i).slice(-2) + "' class='pure-u-22-24' type='text'></div>");
+                }
+            }
+            $('#powerlist_' + jj.toString()).hide();
+            $('#sbtn' + jj.toString()).click(function () {
+                $('#powerlist_' + jj.toString()).toggle();
+            });
+        }
+        $('#advanced-settings').hide();
 
         $('#advbtn').click(function () {
             $('#advanced-settings').toggle();
@@ -707,7 +150,7 @@
         $('form#config').submit(
             function (ev) {
                 var query = "enable=" + $('#enable').prop('checked').toString();
-                for (var jj = 0; jj < 1; jj++) {
+                for (var jj = 0; jj < numberOfLEDs; jj++) {
                     for (var j = 0; j < 24; j++) {
                         for (var i = 0; i < 60; i += 10) {
                             var id = "p" + jj.toString() + "_" + ('00' + j).slice(-2) + ('00' + i).slice(-2);
@@ -726,6 +169,17 @@
             } else {
                 $('#enable').prop("checked", false);
             }
+            var k = 0;
+            for (var jj = 0; jj < numberOfLEDs; jj++) {
+                for (var j = 0; j < 24; j++) {
+                    for (var i = 0; i < 60; i += 10) {
+                        var id = "#p" + jj.toString() + "_" + ('00' + j).slice(-2) + ('00' + i).slice(-2);
+                        $(id).val(json.power[jj][k]);
+                        k++;
+                    }
+                }
+            }
+
             for (var key in json.power) {
                 $("#" + key).val(json.power[key]);
             }
@@ -751,7 +205,7 @@
 
         $('#chart2').on('mouseup', function () {
             var k = 0;
-            for (var jj = 0; jj < 1; jj++) {
+            for (var jj = 0; jj < numberOfLEDs; jj++) {
                 for (var j = 0; j < 24; j++) {
                     for (var i = 0; i < 60; i += 10) {
                         var date = ('00' + j).slice(-2) + ":" + ('00' + i).slice(-2);
@@ -769,7 +223,7 @@
 
         var lightpower = function () {
             var data = [[]];
-            for (var jj = 0; jj < 1; jj++) {
+            for (var jj = 0; jj < numberOfLEDs; jj++) {
                 for (var j = 0; j < 24; j++) {
                     for (var i = 0; i < 60; i += 10) {
                         var date = ('00' + j).slice(-2) + ":" + ('00' + i).slice(-2);
@@ -850,6 +304,7 @@
                     series: [
                         {
                             dragable: {
+                                color: 'red',
                                 constrainTo: 'y'
                             },
                         }
@@ -869,7 +324,7 @@
 
             confset();
             //graph();
-            for (var jj = 0; jj < 1; jj++) {
+            for (var jj = 0; jj < numberOfLEDs; jj++) {
                 for (var j = 0; j < 24; j++) {
                     for (var i = 0; i < 60; i += 10) {
                         var id = "#p" + jj.toString() + "_" + ('00' + j).slice(-2) + ('00' + i).slice(-2);

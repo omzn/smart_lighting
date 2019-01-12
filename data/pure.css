@@ -32,3 +32,4 @@ p{line-height: 1.6em;}
 .button-choose{border: 1px solid #ccc; background: #fff; color: #333; border-radius: 2em; font-weight: bold; position: relative; bottom: -1.5em;}.if-head{color: black; font-weight: 500;}.footer{background: #111; color: #888; text-align: center;}.footer a{color: #ddd;}.btn-red{background: rgb(202, 60, 60);color: #fff;}.pm-fix{top:0px; background: rgba(255,255,255,0.8); position: fixed;}#setting{display: none;}
 .button-show{font-size: 70%; background: rgb(66, 184, 221);color: white;border-radius: 4px;text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);}
 .button-adv{font-size: 70%; background: rgb(221, 61, 184);color: white;border-radius: 4px;text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);}
+#powerlist_0{font-size: 80%;}
