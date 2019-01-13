@@ -104,6 +104,7 @@ int ledLight::control(uint8_t light,int hh, int mm, int ss) {
         power(light,0);
       }
       Serial.println("pwm " + String(light) + ":" + String(current_pwm) );
+      Serial.println("status " + String(light) + ":" + String(_status[light]) );
     }
   }
   return _status[light];

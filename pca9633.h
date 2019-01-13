@@ -1,14 +1,7 @@
 #ifndef _GLM_PCA9633_H
 #define _GLM_PCA9633_H
 
-#if ARDUINO >= 100
- #include "Arduino.h"
-#else
- #include "WProgram.h"
- #include "pins_arduino.h"
- #include "WConstants.h"
-#endif
-
+#include "Arduino.h"
 #include <Wire.h>
 
 // #define PCA9633_ADDR 		(0x62) // slave address

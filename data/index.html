@@ -25,56 +25,7 @@
 
     <div class="l-content">
 
-        <div class="a-t pure-g">
-
-            <div id="led0" class="pure-u-1 pure-u-md-1-3">
-                <div class="at at-lighting">
-                    <div class="at-header">
-                        <h2>Light 0</h2>
-
-                        <span class="at-val">
-                            <div id="ls0">--</div><span id="lv0">--</span>
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <div id="led1" class="pure-u-1 pure-u-md-1-3">
-                <div class="at at-lighting">
-                    <div class="at-header">
-                        <h2>Light 1</h2>
-
-                        <span class="at-val">
-                            <div id="ls1">--</div><span id="lv1">--</span>
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <div id="led2" class="pure-u-1 pure-u-md-1-3">
-                <div class="at at-lighting">
-                    <div class="at-header">
-                        <h2>Light 2</h2>
-
-                        <span class="at-val">
-                            <div id="ls2">--</div><span id="lv2">--</span>
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <div id="led3" class="pure-u-1 pure-u-md-1-3">
-                <div class="at at-lighting">
-                    <div class="at-header">
-                        <h2>Light 3</h2>
-
-                        <span class="at-val">
-                            <div id="ls3">--</div><span id="lv3">--</span>
-                        </span>
-                    </div>
-                </div>
-            </div>
-
+        <div id="light_status" class="a-t pure-g">
         </div>
 
         <div id="settings">
@@ -155,15 +106,20 @@
         var targetPlot, controllerPlot;
 
         var numberOfLEDs = 4;
-
         // make LED power form (this is a source of the graph)
         for (var jj = 0; jj < numberOfLEDs; jj++) {
             var jjs = jj.toString();
+            $('#light_status').append("<div id='led"
+                + jjs + "' class='pure-u-1 pure-u-md-1-3'><div id='ledcolor_"
+                + jjs +"' class='at at-lighting-off'><div class='at-header'><h2>Light "
+                + jjs + "</h2><span class='at-val'><div id='ls"
+                + jjs + "'>--</div><span id='lv"
+                + jjs + "'>--</span></span></div></div></div>");
             $('#sec_sch').append("<form id='s" + jjs + "' class='pure-form pure-form-stacked'><fieldset id='fs" + jjs + "'>");
             $('#fs' + jjs).append("<legend>LED" + jjs +
                 " values <button id='sbtn_" + jjs +
                 "' type='button' class='button-show pure-button'>Show / Hide</button><button id='sub_" + jjs +
-                "' type='submit' class='button-primary pure-button'>Submit</button></legend>");
+                "' type='submit' class='button-submit pure-button'>Submit</button></legend>");
             $('#fs' + jjs).append("<div id='powerlist_" + jjs + "'>");
             for (var j = 0; j < 24; j += 2) {
                 var f2 = ('00' + j).slice(-2);
@@ -180,40 +136,32 @@
             }
             $('#sec_sch').append("</fieldset></form>");
             $('#powerlist_' + jjs).hide();
-            //           $('#sbtn_' + jjs).click(function () {
-            //               $('#powerlist_' + jjs).toggle();
-            //           });
-            $('form#s' + jjs).submit(function (ev) {
-                var query = "d=0";
-                for (var j = 0; j < 24; j++) {
-                    for (var i = 0; i < 60; i += 10) {
-                        var id = "p" + jjs + "_" + ('00' + j).slice(-2) + ('00' + i).slice(-2);
-                        query += "&" + id + "=" + $("#" + id).val();
-                    }
-                }
-                $.post('/config', query, readconfig, "json");
-                //$('#sch_sub').prop('disabled', true);
-                return false;
-            });
         }
         $('#advanced-settings').hide();
 
         $('#advbtn').click(function () {
             $('#advanced-settings').toggle();
         });
-        $('#sbtn_0').click(function () {
-            $('#powerlist_0').toggle();
-        });
-        $('#sbtn_1').click(function () {
-            $('#powerlist_1').toggle();
-        });
-        $('#sbtn_2').click(function () {
-            $('#powerlist_2').toggle();
-        });
-        $('#sbtn_3').click(function () {
-            $('#powerlist_3').toggle();
-        });
 
+        for (var jj = 0; jj < numberOfLEDs; jj++) {
+            (function (n) {
+                $('form#s' + n.toString()).submit(function (ev) {
+                    var query = "d=0";
+                    for (var j = 0; j < 24; j++) {
+                        for (var i = 0; i < 60; i += 10) {
+                            var id = "p" + n.toString() + "_" + ('00' + j).slice(-2) + ('00' + i).slice(-2);
+                            query += "&" + id + "=" + $("#" + id).val();
+                        }
+                    }
+                    $.post('/config', query, readconfig, "json");
+                    //$('#sch_sub').prop('disabled', true);
+                    return false;
+                });
+                $('#sbtn_' + n.toString()).click(function () {
+                    $('#powerlist_' + n.toString()).toggle();
+                });
+            })(jj);
+        }
 
         $('form#config1').submit(
             function (ev) {
@@ -222,6 +170,12 @@
                 //$('#sch_sub').prop('disabled', true);
                 return false;
             });
+
+        $('#enable').click(function () {
+            $.post('/config',
+                "enable=" + $('#enable').prop('checked').toString(),
+                readconfig, "json");
+        });
 
         function readconfig(json) {
             if (json.enable == "true") {
@@ -248,10 +202,17 @@
         function update() {
             $.getJSON('/status', function (json) {
                 for (var i = 0; i < numberOfLEDs; i++) {
+                    var check = $('#ledcolor_'+i.toString()).hasClass('at-lighting-on');
                     if (json[i].status == 0) {
                         $('#ls' + i.toString()).html("OFF");
+                        if( check ) {
+                            $('#ledcolor_'+i.toString()).removeClass('at-lighting-on').addClass('at-lighting-off');
+                        }
                     } else if (json[i].status == 1) {
                         $('#ls' + i.toString()).html("ON");
+                        if( !check ) {
+                            $('#ledcolor_'+i.toString()).removeClass('at-lighting-off').addClass('at-lighting-on');
+                        }
                     }
                     $('#lv' + i.toString()).html(json[i].brightness.toString());
                 }

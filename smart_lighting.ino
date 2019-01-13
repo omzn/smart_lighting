@@ -66,19 +66,15 @@ WiFiClient client;
 RTC_Millis rtc;
 
 NTP ntp("ntp.nict.jp");
-ledLight light;
 S7S s7s;
+ledLight light;
+//ledLight lights[MAX_LIGHT_UNITS];
+//ledLight *lights[MAX_LIGHT_UNITS];
 
 /* Setup and loop */
 
 void setup() {
   ESP.wdtDisable();
-  pinMode(PIN_LIGHT, OUTPUT);
-  digitalWrite(PIN_LIGHT, LOW);
-
-  //  analogWriteRange(1024);
-  //  analogWriteFreq(200);
-
   p_millis = millis();
 #ifdef DEBUG
   Serial.begin(115200);
@@ -98,8 +94,11 @@ void setup() {
 #ifdef DEBUG
   Serial.println("RTC began");
 #endif
+
+
   Wire.begin(PIN_SDA,PIN_SCL);
   light.begin(PCA9633_ADDRESS_1);
+//  lights[0]->begin(PCA9633_ADDRESS_2);
 
   settingMode = true;
   WiFi.persistent(false);
@@ -303,14 +302,12 @@ boolean restoreConfig() {
 
     int e_schedule = EEPROM.read(EEPROM_SCHEDULE_ADDR) == 1 ? 1 : 0;
     light.enable(e_schedule == 0 ? 0 : 1);
+//    lights[1]->enable(e_schedule == 0 ? 0 : 1);
 
     int e_max = EEPROM.read(EEPROM_MAX_ADDR) | EEPROM.read(EEPROM_MAX_ADDR + 1)
                                                    << 8;
     light.max_power(e_max);
-#ifdef DEBUG
-    Serial.print("schedule:");
-    Serial.println(light.enable());
-#endif
+//    lights[1]->max_power(e_max);
     int k = 0;
     for (int jj = 0; jj < MAX_LED_NUM; jj++) {
       for (int j = 0; j < 24; j++) {
@@ -619,7 +616,8 @@ void handleConfig() {
     if (argname == "enable") {
       en = (argv == "true" ? 1 : 0);
       light.enable(en);
-      EEPROM.write(EEPROM_SCHEDULE_ADDR, char(light.enable()));
+      //lights[1]->enable(en);
+      EEPROM.write(EEPROM_SCHEDULE_ADDR, char(en));
       EEPROM.commit();
     } else if (argname.substring(0, 1) == "p") {
       uint8_t ll = argname.substring(1, 2).toInt();
@@ -633,8 +631,9 @@ void handleConfig() {
     } else if (argname == "max_power") {
       int max_v = argv.toInt();
       light.max_power(max_v);
-      EEPROM.write(EEPROM_MAX_ADDR, char(light.max_power() & 0xFF));
-      EEPROM.write(EEPROM_MAX_ADDR + 1, char(light.max_power() >> 8));
+      //lights[1]->max_power(max_v);
+      EEPROM.write(EEPROM_MAX_ADDR, char(max_v & 0xFF));
+      EEPROM.write(EEPROM_MAX_ADDR + 1, char(max_v >> 8));
       EEPROM.commit();
     }
   }

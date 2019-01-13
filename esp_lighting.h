@@ -19,7 +19,7 @@
 //#define PIN_SPI_MISO  (12)
 
 #define PCA9633_ADDRESS_1            (0x60)
-//#define MAX_LED_NUM   (1)
+#define MAX_LIGHT_UNITS              (1)
 
 #define EEPROM_SSID_ADDR             (0)
 #define EEPROM_PASS_ADDR            (32)
