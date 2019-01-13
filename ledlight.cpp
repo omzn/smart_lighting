@@ -2,10 +2,17 @@
 
 ledLight::ledLight() {
   _reset_flag = 1;
-  _status[LIGHT0] = 0;
-  _status[LIGHT1] = 0;
-  _status[LIGHT2] = 0;
-  _status[LIGHT3] = 0;
+  for (int i=0;i<MAX_LED_NUM;i++) {
+    _status[i] = _power[i] = _int_power[i] = 0;
+  }
+}
+
+void ledLight::begin() {
+  driver[0].begin(PCA9633_ADDRESS_1);
+  driver[1].begin(PCA9633_ADDRESS_2);
+  for (int i=0;i<MAX_LED_NUM;i++) {
+    power(i,0);
+  }
 }
 
 uint8_t ledLight::status(uint8_t v) { return _status[v]; }
@@ -32,22 +39,24 @@ void ledLight::brightness(uint8_t light,float v) {
 int ledLight::power(uint8_t light) { return int(_power[light]); }
 
 void ledLight::power(uint8_t light, float v) {
-  _power[light] = constrain(v, 0, _max_pwm_value);
+  if (light >= MAX_LED_NUM)
+    return;
 
+  _power[light] = constrain(v, 0, _max_pwm_value);
   if (_power[light] >= _max_pwm_value) {
     _power[light] = _max_pwm_value;
     _int_power[light] = _max_pwm_value;
-    setpwm(light , _int_power[light]);
+    driver[light/4].setpwm(light % 4 , _int_power[light]);
     _status[light] = LIGHT_ON;
-  } else if (_power <= 0) {
+  } else if (_power[light] <= 0) {
     _power[light] = 0;
     _int_power[light] = 0;
-    setpwm(light, _int_power[light]);
+    driver[light/4].setpwm(light % 4 , _int_power[light]);
     _status[light] = LIGHT_OFF;
   } else {
     if (_int_power[light] != int(_power[light])) {
       _int_power[light] = int(_power[light]);
-      setpwm(light,_int_power[light]);
+      driver[light/4].setpwm(light % 4 , _int_power[light]);
       _status[light] = LIGHT_ON;
     }
   }
@@ -96,11 +105,11 @@ int ledLight::control(uint8_t light,int hh, int mm, int ss) {
     current_pwm = previous_pwm + diff * ((mm % 10)*60 + ss);
 
     if (int(current_pwm) != power(light)) {
-      if (current_pwm > 0) {
-        _status[light] = LIGHT_ON;
+      if (int(current_pwm) > 0) {
+//        _status[light] = LIGHT_ON;
         power(light,current_pwm);
       } else {
-        _status[light] = LIGHT_OFF;
+//        _status[light] = LIGHT_OFF;
         power(light,0);
       }
       Serial.println("pwm " + String(light) + ":" + String(current_pwm) );

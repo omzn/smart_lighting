@@ -7,12 +7,16 @@
 #define MAX_PWM_VALUE 255
 #define MAX_LED_NUM (4)
 
-enum {LIGHT_OFF=0,LIGHT_ON,LIGHT_TURNING_OFF,LIGHT_TURNING_ON};
-enum {LIGHT0=0,LIGHT1,LIGHT2,LIGHT3};
+#define PCA9633_ADDRESS_1            (0x60)
+#define PCA9633_ADDRESS_2            (0x61)
 
-class ledLight : public PCA9633 {
+enum {LIGHT_OFF=0,LIGHT_ON,LIGHT_TURNING_OFF,LIGHT_TURNING_ON};
+enum {LIGHT0=0,LIGHT1,LIGHT2,LIGHT3,LIGHT4,LIGHT5,LIGHT6,LIGHT7};
+
+class ledLight {
   public:
     ledLight();
+    void begin();
     int  enable();
     void enable(int v);
     int control(uint8_t light, int hh, int mm, int ss);
@@ -28,6 +32,7 @@ class ledLight : public PCA9633 {
     void powerAtTime(uint8_t light,uint8_t val, uint8_t h, uint8_t m);
     uint8_t status(uint8_t light);
   protected:
+    PCA9633 driver[2];
     uint16_t _max_pwm_value = MAX_PWM_VALUE;
     uint8_t _enable_schedule;
     uint8_t _status[MAX_LED_NUM]; 

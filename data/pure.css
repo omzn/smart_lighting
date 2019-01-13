@@ -35,6 +35,7 @@ p{line-height: 1.6em;}
 .button-show{font-size: 70%; background: rgb(66, 184, 221);color: white;border-radius: 4px;text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);}
 .button-adv{font-size: 70%; background: rgb(221, 61, 184);color: white;border-radius: 4px;text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);}
 .button-submit{font-size: 70%; background: rgb(66, 66, 221);color: white;border-radius: 4px;text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);}
+.button-cp{font-size: 70%; background: rgb(43, 121, 238);color: white;border-radius: 4px;text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);}
 #powerlist_0{font-size: 80%;}
 #powerlist_1{font-size: 80%;}
 #powerlist_2{font-size: 80%;}

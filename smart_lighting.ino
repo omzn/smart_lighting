@@ -12,8 +12,6 @@
       enable=[true|false]
       p[x]_[hhmm]=uint8_t (x -> LED id, hhmm -> time)
       max_power=(int)
-      //time[1-10]=(hh:mm)
-      //power[1-10]=(int)
    /wifireset
    /reset
    /reboot
@@ -81,7 +79,7 @@ void setup() {
 #else
   Serial.begin(9600);
 #endif
-  EEPROM.begin(1024);
+  EEPROM.begin(2048);
   delay(10);
 
   //  s7s.begin(9600);
@@ -97,8 +95,7 @@ void setup() {
 
 
   Wire.begin(PIN_SDA,PIN_SCL);
-  light.begin(PCA9633_ADDRESS_1);
-//  lights[0]->begin(PCA9633_ADDRESS_2);
+  light.begin();
 
   settingMode = true;
   WiFi.persistent(false);
@@ -246,9 +243,6 @@ void post_data(int room, String label, float value) {
  ***************************************************************/
 
 boolean restoreConfig() {
-#ifdef DEBUG
-  Serial.println("Reading EEPROM...");
-#endif
   String ssid = "";
   String pass = "";
 
@@ -267,7 +261,7 @@ boolean restoreConfig() {
   }
 
 #ifdef DEBUG
-  Serial.println("Reading EEPROM(2)...");
+  Serial.println("Reading EEPROM...");
 #endif
 
   if (EEPROM.read(EEPROM_SSID_ADDR) != 0) {
@@ -307,15 +301,15 @@ boolean restoreConfig() {
     int e_max = EEPROM.read(EEPROM_MAX_ADDR) | EEPROM.read(EEPROM_MAX_ADDR + 1)
                                                    << 8;
     light.max_power(e_max);
-//    lights[1]->max_power(e_max);
-    int k = 0;
     for (int jj = 0; jj < MAX_LED_NUM; jj++) {
+      int k = 0;
       for (int j = 0; j < 24; j++) {
         for (int i = 0; i < 60; i += 10) {
           uint8_t val = EEPROM.read(EEPROM_POWER_ADDR + 144 * jj + k);
           val = val > 100 ? 100 : val;
           light.powerAtTime(jj, val, j, i);
           k++;
+          delay(10);
         }
       }
     }
@@ -626,7 +620,7 @@ void handleConfig() {
       uint16_t address = ll * 144 + hh * 6 + m;
       uint8_t val = argv.toInt();
       light.powerAtTime(ll, val, hh, m * 10);
-      EEPROM.write(EEPROM_POWER_ADDR + address, argv.toInt());
+      EEPROM.write(EEPROM_POWER_ADDR + address, val);
       EEPROM.commit();
     } else if (argname == "max_power") {
       int max_v = argv.toInt();
@@ -650,7 +644,6 @@ void handleConfig() {
   json["enable"] = boolstr[light.enable()];
   //  json["power"] = power;
   json["max_power"] = light.max_power();
-  json["timestamp"] = timestamp();
   json.printTo(message);
   webServer.send(200, "application/json", message);
 }
@@ -663,7 +656,6 @@ void handleStatus() {
     JsonObject &json = arr.createNestedObject();
     json["brightness"] = light.brightness(jj);
     json["status"] = light.status(jj);
-    json["timestamp"] = timestamp();
   }
   arr.printTo(message);
   webServer.send(200, "application/json", message);
