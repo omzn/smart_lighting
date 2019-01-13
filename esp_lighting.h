@@ -3,8 +3,8 @@
 
 #define DEBUG
 
-//#define PIN_SDA          (2)
-//#define PIN_SCL          (5)
+#define PIN_SDA          (4)
+#define PIN_SCL          (5)
 
 #define PIN_LIGHT         (15)
 // pin #15 is hw pulled down
@@ -18,6 +18,9 @@
 //#define PIN_SPI_MOSI  (13)
 //#define PIN_SPI_MISO  (12)
 
+#define PCA9633_ADDRESS_1            (0x60)
+//#define MAX_LED_NUM   (1)
+
 #define EEPROM_SSID_ADDR             (0)
 #define EEPROM_PASS_ADDR            (32)
 #define EEPROM_MDNS_ADDR            (96)
@@ -25,7 +28,7 @@
 #define EEPROM_DIM_ADDR            (128+5)
 #define EEPROM_MAX_ADDR            (133+2)
 #define EEPROM_POWER_ADDR          (135+2)
-#define EEPROM_LAST_ADDR           (137+144)
+#define EEPROM_LAST_ADDR           (137+144*4)
 
 #define SECONDS_UTC_TO_JST (32400)
 

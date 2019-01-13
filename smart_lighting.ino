@@ -21,9 +21,6 @@
 
 #include "esp_lighting.h" // Configuration parameters
 
-#include "SF_s7s_hw.h"
-#include "ledlight.h"
-#include "ntp.h"
 #include <ArduinoJson.h>
 #include <ArduinoOTA.h>
 #include <DNSServer.h>
@@ -39,6 +36,11 @@
 #include <Wire.h>
 #include <pgmspace.h>
 
+#include "SF_s7s_hw.h"
+#include "ledlight.h"
+#include "ntp.h"
+#include "pca9633.h"
+
 const String boolstr[2] = {"false", "true"};
 
 String website_name = "newaqualight";
@@ -53,7 +55,7 @@ uint32_t timer_count = 0;
 
 uint32_t p_millis;
 int prev_m = 0;
-int prev_s = -1;
+int prev_s[MAX_LED_NUM];
 
 DNSServer dnsServer;
 MDNSResponder mdns;
@@ -64,7 +66,7 @@ WiFiClient client;
 RTC_Millis rtc;
 
 NTP ntp("ntp.nict.jp");
-ledLight light(PIN_LIGHT);
+ledLight light;
 S7S s7s;
 
 /* Setup and loop */
@@ -83,7 +85,7 @@ void setup() {
 #else
   Serial.begin(9600);
 #endif
-  EEPROM.begin(512);
+  EEPROM.begin(1024);
   delay(10);
 
   //  s7s.begin(9600);
@@ -96,6 +98,8 @@ void setup() {
 #ifdef DEBUG
   Serial.println("RTC began");
 #endif
+  Wire.begin(PIN_SDA,PIN_SCL);
+  light.begin(PCA9633_ADDRESS_1);
 
   settingMode = true;
   WiFi.persistent(false);
@@ -174,35 +178,37 @@ void loop() {
     }
     if (!settingMode) {
       DateTime now = rtc.now();
-      int st = light.control(now.hour(), now.minute(), now.second());
-      if (st == LIGHT_ON) {
-        if (prev_s != st) {
-          post_data(5, "light", st);
+      for (int jj = 0; jj < MAX_LED_NUM; jj++) {
+        int st = light.control(jj, now.hour(), now.minute(), now.second());
+        if (st == LIGHT_ON) {
+          if (prev_s[jj] != st) {
+            post_data(5, "light" + String(jj), st);
+          }
+          if (prev_m != now.minute()) {
+            s7s.clearDisplay();
+            s7s.setBrightness(255);
+            s7s.printTime(timestamp_s7s());
+          }
+        } else if (st == LIGHT_OFF) {
+          if (prev_s[jj] != st) {
+            post_data(5, "light", st);
+          }
+          if (prev_m != now.minute()) {
+            s7s.clearDisplay();
+            s7s.setBrightness(127);
+            s7s.printTime(timestamp_s7s());
+          }
+        } else {
+          //        if (prev_s != st) {
+//          s7s.clearDisplay();
+//          s7s.setBrightness(255);
+//          s7s.print4d(light.power());
+          //          s7s.print("dirn");
+          //        }
         }
-        if (prev_m != now.minute()) {
-          s7s.clearDisplay();
-          s7s.setBrightness(255);
-          s7s.printTime(timestamp_s7s());
-        }
-      } else if (st == LIGHT_OFF) {
-        if (prev_s != st) {
-          post_data(5, "light", st);
-        }
-        if (prev_m != now.minute()) {
-          s7s.clearDisplay();
-          s7s.setBrightness(127);
-          s7s.printTime(timestamp_s7s());
-        }
-      } else {
-        //        if (prev_s != st) {
-        s7s.clearDisplay();
-        s7s.setBrightness(255);
-        s7s.print4d(light.power());
-        //          s7s.print("dirn");
-        //        }
+        prev_m = now.minute();
+        prev_s[jj] = st;
       }
-      prev_m = now.minute();
-      prev_s = st;
     }
     timer_count++;
     timer_count %= (86400UL);
@@ -298,43 +304,24 @@ boolean restoreConfig() {
     int e_schedule = EEPROM.read(EEPROM_SCHEDULE_ADDR) == 1 ? 1 : 0;
     light.enable(e_schedule == 0 ? 0 : 1);
 
-    int e_on_h = EEPROM.read(EEPROM_SCHEDULE_ADDR + 1);
-    int e_on_m = EEPROM.read(EEPROM_SCHEDULE_ADDR + 2);
-    int e_off_h = EEPROM.read(EEPROM_SCHEDULE_ADDR + 3);
-    int e_off_m = EEPROM.read(EEPROM_SCHEDULE_ADDR + 4);
-    light.schedule(e_on_h, e_on_m, e_off_h, e_off_m);
-
-    int e_dim = EEPROM.read(EEPROM_DIM_ADDR) | EEPROM.read(EEPROM_DIM_ADDR + 1)
-                                                   << 8;
-    light.dim(e_dim);
     int e_max = EEPROM.read(EEPROM_MAX_ADDR) | EEPROM.read(EEPROM_MAX_ADDR + 1)
                                                    << 8;
     light.max_power(e_max);
 #ifdef DEBUG
     Serial.print("schedule:");
     Serial.println(light.enable());
-    Serial.print("dim:");
-    Serial.println(light.dim());
-    Serial.print("schedule: ");
-    Serial.print(light.on_h());
-    Serial.print(":");
-    Serial.print(light.on_m());
-    Serial.print("-");
-    Serial.print(light.off_h());
-    Serial.print(":");
-    Serial.println(light.off_m());
 #endif
-  int k = 0;
-  for (int jj = 0; jj < 1; jj++) {
-    for (int j = 0; j < 24; j++) {
-      for (int i = 0; i < 60; i += 10) {
-        uint8_t val = EEPROM.read(EEPROM_POWER_ADDR + 144 * jj + k); 
-        val = val > 100 ? 100: val;
-        light.powerAtTime(val, j, i);
-        k++;
+    int k = 0;
+    for (int jj = 0; jj < MAX_LED_NUM; jj++) {
+      for (int j = 0; j < 24; j++) {
+        for (int i = 0; i < 60; i += 10) {
+          uint8_t val = EEPROM.read(EEPROM_POWER_ADDR + 144 * jj + k);
+          val = val > 100 ? 100 : val;
+          light.powerAtTime(jj, val, j, i);
+          k++;
+        }
       }
     }
-  }
 
     return true;
   } else {
@@ -551,7 +538,7 @@ void handleReboot() {
 
 void handleActionOn() {
   String message, argname, argv;
-  int p = -1, err;
+  int p = -1, l = 0, err;
 
   // on
   DynamicJsonBuffer jsonBuffer;
@@ -560,37 +547,51 @@ void handleActionOn() {
   for (int i = 0; i < webServer.args(); i++) {
     argname = webServer.argName(i);
     argv = webServer.arg(i);
-    if (argname == "brightness") {
+    if (argname == "light") {
+      l = argv.toInt();
+    } else if (argname == "brightness") {
       p = argv.toInt();
-    } 
+    }
   }
   if (p >= 0) {
-    err = light.control(p);
+    err = light.control(l, p);
   } else {
-    err = light.control(100);
+    err = light.control(l, 100);
   }
   if (err < 0) {
-    json["error"] = "Cannot turn on/off light while schedule is set.";
+    json["error"] = "Cannot turn on/off light while schedule is enabled.";
+  } else {
+    json["light"] = l;
+    json["brightness"] = light.brightness(l);
+    json["status"] = light.status(l);
+    json["timestamp"] = timestamp();
   }
-  json["brightness"] = light.brightness();
-  json["status"] = light.status();
-  json["timestamp"] = timestamp();
   json.printTo(message);
   webServer.send(200, "application/json", message);
 }
 
 void handleActionOff() {
-  String message;
+  String message, argname, argv;
   DynamicJsonBuffer jsonBuffer;
   JsonObject &json = jsonBuffer.createObject();
+  uint8_t l = 0;
 
+  for (int i = 0; i < webServer.args(); i++) {
+    argname = webServer.argName(i);
+    argv = webServer.arg(i);
+    if (argname == "light") {
+      l = argv.toInt();
+    }
+  }
   // off
-  int err = light.control(0);
+
+  int err = light.control(l, 0);
   if (err < 0) {
     json["error"] = "Cannot turn on/off light while schedule is set.";
   }
-  json["brightness"] = light.brightness();
-  json["status"] = light.status();
+  json["light"] = l;
+  json["brightness"] = light.brightness(l);
+  json["status"] = light.status(l);
   json["timestamp"] = timestamp();
   json.printTo(message);
   webServer.send(200, "application/json", message);
@@ -603,7 +604,7 @@ void handleConfig() {
   DynamicJsonBuffer jsonBuffer;
   JsonObject &json = jsonBuffer.createObject();
   JsonArray &powerarray = json.createNestedArray("power");
- 
+
   on_h = on_m = off_h = off_m = dim = -1;
 
   for (int i = 0; i < webServer.args(); i++) {
@@ -621,11 +622,12 @@ void handleConfig() {
       EEPROM.write(EEPROM_SCHEDULE_ADDR, char(light.enable()));
       EEPROM.commit();
     } else if (argname.substring(0, 1) == "p") {
+      uint8_t ll = argname.substring(1, 2).toInt();
       uint8_t hh = argname.substring(3, 5).toInt();
       uint8_t m = argname.substring(5, 6).toInt();
-      uint16_t address = hh * 6 + m;
+      uint16_t address = ll * 144 + hh * 6 + m;
       uint8_t val = argv.toInt();
-      light.powerAtTime(val,hh,m*10);
+      light.powerAtTime(ll, val, hh, m * 10);
       EEPROM.write(EEPROM_POWER_ADDR + address, argv.toInt());
       EEPROM.commit();
     } else if (argname == "max_power") {
@@ -637,18 +639,17 @@ void handleConfig() {
     }
   }
 
-  for (int jj = 0; jj < 1; jj++) {
+  for (int jj = 0; jj < MAX_LED_NUM; jj++) {
     JsonArray &powerseq = powerarray.createNestedArray();
     for (int j = 0; j < 24; j++) {
       for (int i = 0; i < 60; i += 10) {
-        sprintf(buf, "%02d%02d", j, i);
-        powerseq.add(light.powerAtTime(j, i));
+        powerseq.add(light.powerAtTime(jj, j, i));
       }
     }
   }
 
   json["enable"] = boolstr[light.enable()];
-//  json["power"] = power;
+  //  json["power"] = power;
   json["max_power"] = light.max_power();
   json["timestamp"] = timestamp();
   json.printTo(message);
@@ -658,11 +659,14 @@ void handleConfig() {
 void handleStatus() {
   String message;
   DynamicJsonBuffer jsonBuffer;
-  JsonObject &json = jsonBuffer.createObject();
-  json["brightness"] = light.brightness();
-  json["status"] = light.status();
-  json["timestamp"] = timestamp();
-  json.printTo(message);
+  JsonArray &arr = jsonBuffer.createArray();
+  for (int jj = 0; jj < MAX_LED_NUM; jj++) {
+    JsonObject &json = arr.createNestedObject();
+    json["brightness"] = light.brightness(jj);
+    json["status"] = light.status(jj);
+    json["timestamp"] = timestamp();
+  }
+  arr.printTo(message);
   webServer.send(200, "application/json", message);
 }
 
