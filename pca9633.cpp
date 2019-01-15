@@ -124,7 +124,7 @@ uint8_t PCA9633::getFade() {
 }*/
 
 void PCA9633::setpwm(uint8_t pwmaddr, uint8_t pwmval) {
-  _i2c_write(_pcaAddr, PWM0 + pwmaddr, linearize(pwmval));
+  _i2c_write(_pcaAddr, PWM0 + pwmaddr, pwmval);
 }
 
 void PCA9633::setgrouppwm(uint8_t pwm) {

@@ -7,6 +7,9 @@
 #define MAX_PWM_VALUE 255
 #define MAX_LED_NUM (4)
 
+#define PWM_MIN (50)
+#define PWM_ON_THRESHOLD (104)
+
 #define PCA9633_ADDRESS_1            (0x60)
 #define PCA9633_ADDRESS_2            (0x61)
 

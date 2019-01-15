@@ -66,8 +66,6 @@ RTC_Millis rtc;
 NTP ntp("ntp.nict.jp");
 S7S s7s;
 ledLight light;
-//ledLight lights[MAX_LIGHT_UNITS];
-//ledLight *lights[MAX_LIGHT_UNITS];
 
 /* Setup and loop */
 
@@ -178,7 +176,7 @@ void loop() {
         int st = light.control(jj, now.hour(), now.minute(), now.second());
         if (st == LIGHT_ON) {
           if (prev_s[jj] != st) {
-            post_data(5, "light" + String(jj), st);
+//            post_data(5, "light" + String(jj), st);
           }
           if (prev_m != now.minute()) {
             s7s.clearDisplay();
@@ -187,7 +185,7 @@ void loop() {
           }
         } else if (st == LIGHT_OFF) {
           if (prev_s[jj] != st) {
-            post_data(5, "light", st);
+//            post_data(5, "light" + String(jj), st);
           }
           if (prev_m != now.minute()) {
             s7s.clearDisplay();
@@ -529,7 +527,8 @@ void handleReboot() {
 
 void handleActionOn() {
   String message, argname, argv;
-  int p = -1, l = 0, err;
+  int p = -1,  err;
+  uint8_t l = 0;
 
   // on
   DynamicJsonBuffer jsonBuffer;
@@ -554,8 +553,9 @@ void handleActionOn() {
   } else {
     json["light"] = l;
     json["brightness"] = light.brightness(l);
+    json["pwm"] = light.power(l);
     json["status"] = light.status(l);
-    json["timestamp"] = timestamp();
+//    json["timestamp"] = timestamp();
   }
   json.printTo(message);
   webServer.send(200, "application/json", message);
@@ -652,9 +652,10 @@ void handleStatus() {
   String message;
   DynamicJsonBuffer jsonBuffer;
   JsonArray &arr = jsonBuffer.createArray();
-  for (int jj = 0; jj < MAX_LED_NUM; jj++) {
+  for (uint8_t jj = 0; jj < MAX_LED_NUM; jj++) {
     JsonObject &json = arr.createNestedObject();
     json["brightness"] = light.brightness(jj);
+    json["pwm"] = light.power(jj);
     json["status"] = light.status(jj);
   }
   arr.printTo(message);

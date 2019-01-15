@@ -29,18 +29,22 @@ void ledLight::max_power(int v) {
 }
 
 int ledLight::brightness(uint8_t light) { 
-  return int(_power[light] / _max_pwm_value * 100); 
+  return int(0.5 + (_power[light] > 50 ? _power[light]-PWM_MIN : 0) / (_max_pwm_value - PWM_MIN) * 100); 
 }
 
 void ledLight::brightness(uint8_t light,float v) { 
-  power(light,map(v,0,100,0,_max_pwm_value));
+  power(light,map(v,0,100,PWM_MIN,_max_pwm_value));
 }
 
 int ledLight::power(uint8_t light) { return int(_power[light]); }
 
 void ledLight::power(uint8_t light, float v) {
+  float prev_power;
+  int off_on_threshold = 104;
+
   if (light >= MAX_LED_NUM)
     return;
+  prev_power = _power[light];
 
   _power[light] = constrain(v, 0, _max_pwm_value);
   if (_power[light] >= _max_pwm_value) {
@@ -48,13 +52,17 @@ void ledLight::power(uint8_t light, float v) {
     _int_power[light] = _max_pwm_value;
     driver[light/4].setpwm(light % 4 , _int_power[light]);
     _status[light] = LIGHT_ON;
-  } else if (_power[light] <= 0) {
+  } else if (_power[light] <= 50) {
     _power[light] = 0;
     _int_power[light] = 0;
-    driver[light/4].setpwm(light % 4 , _int_power[light]);
+    driver[light/4].setpwm(light % 4 , 0);
     _status[light] = LIGHT_OFF;
-  } else {
+  } else {    
     if (_int_power[light] != int(_power[light])) {
+      if (prev_power <= PWM_MIN) {
+        driver[light/4].setpwm(light % 4 , off_on_threshold);
+        delay(1);
+      }
       _int_power[light] = int(_power[light]);
       driver[light/4].setpwm(light % 4 , _int_power[light]);
       _status[light] = LIGHT_ON;
@@ -98,9 +106,9 @@ int ledLight::control(uint8_t light,int hh, int mm, int ss) {
     int index = hh * 6 + mm / 10;
 
     previous_power = _powerAtTime[light][index];
-    previous_pwm = map(previous_power,0,100,0,_max_pwm_value);
+    previous_pwm = map(previous_power,0,100,PWM_MIN,_max_pwm_value);
     next_power = _powerAtTime[light][(index + 1) % 144];
-    next_pwm = map(next_power,0,100,0,_max_pwm_value);
+    next_pwm = map(next_power,0,100,PWM_MIN,_max_pwm_value);
     float diff = (next_pwm - previous_pwm) / 600.0;
     current_pwm = previous_pwm + diff * ((mm % 10)*60 + ss);
 
@@ -112,8 +120,6 @@ int ledLight::control(uint8_t light,int hh, int mm, int ss) {
 //        _status[light] = LIGHT_OFF;
         power(light,0);
       }
-      Serial.println("pwm " + String(light) + ":" + String(current_pwm) );
-      Serial.println("status " + String(light) + ":" + String(_status[light]) );
     }
   }
   return _status[light];
