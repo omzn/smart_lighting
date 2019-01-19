@@ -2,45 +2,46 @@
 #define LEDLIGHT_H
 
 #include "Arduino.h"
+#include "pca9633.h"
 
-#define MAX_PWM_VALUE 1023
+#define MAX_PWM_VALUE 255
+#define MAX_LED_NUM (8)
+
+#define PWM_MIN (50)
+#define PWM_ON_THRESHOLD (104)
+
+#define PCA9633_ADDRESS_1            (0x60)
+#define PCA9633_ADDRESS_2            (0x62)
 
 enum {LIGHT_OFF=0,LIGHT_ON,LIGHT_TURNING_OFF,LIGHT_TURNING_ON};
+enum {LIGHT0=0,LIGHT1,LIGHT2,LIGHT3,LIGHT4,LIGHT5,LIGHT6,LIGHT7};
 
 class ledLight {
   public:
-    ledLight(uint8_t pin);
-
+    ledLight();
+    void begin();
     int  enable();
     void enable(int v);
-    void schedule(int on_h, int on_m, int off_h, int off_m);
-    int control(int hh, int mm);
-    int control(uint16_t v);
-    uint16_t dim();
-    void dim(int v);
-    int power();
+    int control(uint8_t light, int hh, int mm, int ss);
+    int control(uint8_t light, uint16_t v);
+    int max_power();
+    void max_power(int v);
+    int power(uint8_t light);
     void power(float v);
-    int on_h();
-    int on_m();
-    int off_h();
-    int off_m();
-    void on_h(int v);
-    void on_m(int v);
-    void off_h(int v);
-    void off_m(int v);
-    uint8_t status();
+    void power(uint8_t light,float v);
+    int brightness(uint8_t light);
+    void brightness(uint8_t light,float v);
+    uint8_t powerAtTime(uint8_t light,uint8_t h, uint8_t m);
+    void powerAtTime(uint8_t light,uint8_t val, uint8_t h, uint8_t m);
+    uint8_t status(uint8_t light);
   protected:
+    PCA9633 driver[2];
+    uint16_t _max_pwm_value = MAX_PWM_VALUE;
     uint8_t _enable_schedule;
-    uint8_t _status; 
-    uint16_t _dim = 10;
-    uint8_t _pin;
-    float _power; 
-    int _int_power;
-    int _on_h;
-    int _on_m;
-    int _off_h;
-    int _off_m;
+    uint8_t _status[MAX_LED_NUM]; 
+    float _power[MAX_LED_NUM]; 
     int _reset_flag;
+    uint8_t _powerAtTime[MAX_LED_NUM][144];
 };
 
 #endif

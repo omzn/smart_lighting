@@ -1,0 +1,5 @@
+output/
+old/
+jqplot/
+.DS_Store
+spiffs.image

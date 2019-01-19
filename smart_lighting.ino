@@ -10,13 +10,8 @@
    /status
    /config
       enable=[true|false]
-      on_h=(int)
-      on_m=(int)
-      off_h=(int)
-      off_m=(int)
-      dim=(int)
-      time[1-10]=(hh:mm)
-      power[1-10]=(int)
+      p[x]_[hhmm]=uint8_t (x -> LED id, hhmm -> time)
+      max_power=(int)
    /wifireset
    /reset
    /reboot
@@ -24,102 +19,117 @@
 
 #include "esp_lighting.h" // Configuration parameters
 
-#include <pgmspace.h>
-#include <Wire.h>
-#include <SPI.h>
-#include <ESP8266WiFi.h>
+#include <Adafruit_GFX.h> // Core graphics library by Adafruit
+#include <ArduinoJson.h>
+#include <ArduinoOTA.h>
+#include <Arduino_ST7789.h> // Hardware-specific library for ST7789 (with or without CS pin)
 #include <DNSServer.h>
-#include <WiFiClient.h>
 #include <EEPROM.h>
 #include <ESP8266WebServer.h>
+#include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
-#include <WiFiUdp.h>
-#include <ArduinoJson.h>
-#include <RTClib.h>
 #include <FS.h>
-#include "ntp.h"
+#include <RTClib.h>
+#include <SPI.h>
+#include <WiFiClient.h>
+#include <WiFiUdp.h>
+#include <Wire.h>
+#include <pgmspace.h>
+
+#include "character.h"
+#include "util.h"
+
+#include "DSEG7Classic-Bold18pt7b.h"
+#include <Fonts/FreeSansBold18pt7b.h>
+#include <Fonts/FreeSansBold12pt7b.h>
+
+//#include "SF_s7s_hw.h"
 #include "ledlight.h"
-#include "SF_s7s_hw.h"
+#include "ntp.h"
+#include "pca9633.h"
 
-const String boolstr[2] = {"false","true"};
+#define FONT_7SEG18PT tft.setFont(&DSEG7Classic_Bold18pt7b)
+#define FONT_SANS18PT tft.setFont(&FreeSansBold18pt7b)
+#define FONT_SANS12PT tft.setFont(&FreeSansBold12pt7b)
 
-const String website_name  = "esplight";
-const char* apSSID         = "WIFI_LIGHT_TAN";
-String sitename;
+const String boolstr[2] = {"false", "true"};
+
+String website_name = "newaqualight";
+const char *apSSID = "WIFI_LIGHT_TAN";
 boolean settingMode;
 String ssidList;
+
+const char *localserver = "mowatmirror.local";
+const int localport = 3000;
 
 uint32_t timer_count = 0;
 
 uint32_t p_millis;
 int prev_m = 0;
-int prev_s = 0;
+int prev_s[MAX_LED_NUM];
+int prev_b[MAX_LED_NUM];
 
 DNSServer dnsServer;
-MDNSResponder mdns;
 const IPAddress apIP(192, 168, 1, 1);
 ESP8266WebServer webServer(80);
+WiFiClient client;
 
 RTC_Millis rtc;
 
+// Arduino_ST7789 tft = Arduino_ST7789(PIN_TFT_DC, PIN_TFT_RST, PIN_TFT_MOSI,
+//                                    PIN_TFT_SCLK); // for display without CS
+//                                    pin
+// Character aquatan = Character(&tft);
+Arduino_ST7789 tft =
+    Arduino_ST7789(PIN_TFT_DC, PIN_TFT_RST); // for display without CS pin
+Character aquatan = Character(&tft);
+
 NTP ntp("ntp.nict.jp");
-ledLight light(PIN_LIGHT);
-S7S s7s;
+ledLight light;
 
 /* Setup and loop */
 
 void setup() {
-  pinMode(PIN_LIGHT, OUTPUT);
-  digitalWrite(PIN_LIGHT, LOW);
-
-  analogWriteRange(MAX_PWM_VALUE);
-  analogWriteFreq(200);
-
+  ESP.wdtDisable();
   p_millis = millis();
 #ifdef DEBUG
   Serial.begin(115200);
 #else
   Serial.begin(9600);
 #endif
-  EEPROM.begin(512);
+  EEPROM.begin(2048);
   delay(10);
 
-//  s7s.begin(9600);
-  s7s.clearDisplay();
-  s7s.setBrightness(255);
-  s7s.print("-HI-");
-  
   SPIFFS.begin();
   rtc.begin(DateTime(2017, 1, 1, 0, 0, 0));
 #ifdef DEBUG
   Serial.println("RTC began");
 #endif
-  sitename = website_name;
 
+  Wire.begin(PIN_SDA, PIN_SCL);
+  light.begin();
+
+  tft.init(240, 240); // initialize a ST7789 chip, 240x240 pixels
+  ESP.wdtFeed();
+  tft.fillScreen(BLACK);
+  ESP.wdtFeed();
+  fillcircles();
+
+  settingMode = true;
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
   if (restoreConfig()) {
     if (checkConnection()) {
-      if (mdns.begin(sitename.c_str(), WiFi.localIP())) {
-#ifdef DEBUG
-        Serial.println("MDNS responder started.");
-#endif
-      }
+      setupArduinoOTA();
       settingMode = false;
-    } else {
-      settingMode = true;
     }
-  } else {
-    settingMode = true;
   }
   if (settingMode == true) {
-    s7s.print("SET ");
-    delay(500);
 #ifdef DEBUG
     Serial.println("Setting mode");
 #endif
-    //WiFi.mode(WIFI_STA);
-    //WiFi.disconnect();
+    // WiFi.mode(WIFI_STA);
+    // WiFi.disconnect();
 #ifdef DEBUG
     Serial.println("Wifi disconnected");
 #endif
@@ -134,6 +144,8 @@ void setup() {
 #ifdef DEBUG
     Serial.println("Wifi AP configured");
 #endif
+    tft.setCursor(0,120);
+    tft.print("Connect " + String(apSSID));
     startWebServer_setting();
 #ifdef DEBUG
     Serial.print("Starting Access Point at \"");
@@ -141,22 +153,35 @@ void setup() {
     Serial.println("\"");
 #endif
   } else {
-    s7s.print("noro");
     ntp.begin();
-    delay(500);
-    startWebServer_normal();
 #ifdef DEBUG
     Serial.println("Starting normal operation.");
 #endif
+    delay(10);
+    startWebServer_normal();
   }
-  //ESP.wdtEnable(100);
+  ESP.wdtEnable(WDTO_8S);
+  aquatan.start(ORIENT_FRONT);
+}
+
+void fillcircles() {
+  tft.setFont(&FreeSansBold18pt7b);
+  tft.setTextColor(WHITE);
+  for (uint8_t jj = 0; jj < MAX_LED_NUM; jj++) {
+    ESP.wdtFeed();
+    tft.fillCircle(30 + 60 * (jj % 4), 30 + (60 * (3 * (jj / 4))), 29, BLACK);
+    tft.drawCircle(30 + 60 * (jj % 4), 30 + (60 * (3 * (jj / 4))), 29, WHITE);
+    tft.setCursor(30 + 60 * (jj % 4) - 9, 30 + (60 * (3 * (jj / 4))) + 9);
+    tft.print(0);
+  }
 }
 
 void loop() {
-  
   ESP.wdtFeed();
   if (settingMode) {
     dnsServer.processNextRequest();
+  } else {
+    ArduinoOTA.handle();
   }
   webServer.handleClient();
 
@@ -165,45 +190,100 @@ void loop() {
     p_millis = millis();
     if (timer_count % 3600 == 0) {
       uint32_t epoch = ntp.getTime();
-      //uint32_t epoch = getNTPtime();
+      // uint32_t epoch = getNTPtime();
       if (epoch > 0) {
-        rtc.adjust(DateTime(epoch + SECONDS_UTC_TO_JST ));
+        rtc.adjust(DateTime(epoch + SECONDS_UTC_TO_JST));
       }
 #ifdef DEBUG
       Serial.print("epoch:");
       Serial.println(epoch);
 #endif
+//      aquatan.queueMoveTo(208,208-60);
+      //aquatan.queueMoveTo(208,208-60);
+      //aquatan.queueAction(STATUS_WAIT,ORIENT_SLEEP,5000);
+      //aquatan.queueAction(STATUS_MOVE,0,60,2,2);
     }
     if (!settingMode) {
       DateTime now = rtc.now();
-      int st = light.control(now.hour(), now.minute());
-      if (st == LIGHT_ON) {
-        if (prev_m != now.minute()) {
-          s7s.clearDisplay();
-          s7s.setBrightness(255);
-          s7s.printTime(timestamp_s7s());
+      tft.setFont(&FreeSansBold18pt7b);
+      for (uint8_t jj = 0; jj < MAX_LED_NUM; jj++) {
+        int st = light.control(jj, now.hour(), now.minute(), now.second());
+        int br = light.brightness(jj);
+        if (prev_b[jj] != br) {
+/*          tft.fillCircle(30 + 60 * (jj%4), 30 + (60 * (3 * (jj / 4))), 29,
+                         tft.Color565(light.power(jj), light.power(jj), 0));
+          tft.drawCircle(30 + 60 * (jj%4), 30 + (60 * (3 * (jj / 4))), 29, WHITE);
+          tft.setCursor(30 + 60 * (jj%4) - (br < 10 ? 9 : (br > 99 ? 27 : 18)),
+                        30 + (60 * (3 * (jj / 4))) + 9);
+          tft.setTextColor(br > 50 ? BLACK : WHITE);
+          tft.print(br);
+          */
+          aquatan.queueMoveTo(14 + 60 * (jj%4), jj/4 ? 180-33 : 61, 2, 4);
+          aquatan.queueAction(STATUS_LIGHT,jj,tft.Color565(light.power(jj), light.power(jj), 0),br);
         }
-      } else if (st == LIGHT_OFF) {
-        if (prev_m != now.minute()) {
-          s7s.clearDisplay();
-          s7s.setBrightness(127);
-          s7s.printTime(timestamp_s7s());
+        prev_b[jj] = br;
+        if (st == LIGHT_ON) {
+          if (prev_s[jj] != st) {
+            //            post_data(5, "light" + String(jj), st);
+          }
+        } else if (st == LIGHT_OFF) {
+          if (prev_s[jj] != st) {
+            //            post_data(5, "light" + String(jj), st);
+          }
+        } else {
         }
-      } else {
-//        if (prev_s != st) {
-          s7s.clearDisplay();
-          s7s.setBrightness(255);
-          s7s.print4d(light.power());
-//          s7s.print("dirn");
-//        }
-      }
-      prev_m = now.minute();
+          if (prev_m != now.minute()) {
+            char buf[6];
+            FONT_7SEG18PT;
+            tft.setCursor(CLOCK_POS_X, CLOCK_POS_Y);
+            tft.setTextColor(BLACK);
+            tft.print("88:88");
+            tft.setCursor(CLOCK_POS_X, CLOCK_POS_Y);
+            tft.setTextColor(WHITE);
+            sprintf(buf,"%02d:%02d",now.hour(),now.minute());
+            tft.print(buf);
+            FONT_SANS18PT;
+          }
 
+        prev_m = now.minute();
+        prev_s[jj] = st;
+      }
     }
     timer_count++;
     timer_count %= (86400UL);
   }
-  delay(10);
+  if (aquatan.getStatus() == STATUS_WAIT) {
+    aquatan.sleep();
+    aquatan.dequeueAction();
+  }
+  int d = aquatan.update();
+  delay(d + 1);
+}
+
+void post_data(int room, String label, float value) {
+  if (client.connect(localserver, localport)) {
+    // Create HTTP POST Data
+    String postData;
+    char str[64];
+
+    //    postData = "room=" + String(room) + "&label=" + label + "&value=" +
+    //    value;
+    sprintf(str, "room=%d&label=%s&value=%4.1f", room, label.c_str(), value);
+    postData += str;
+
+    client.print("POST /api/v1/add HTTP/1.1\n");
+    client.print("Host: ");
+    client.print(localserver);
+    client.print("\n");
+    client.print("Connection: close\n");
+    client.print("Content-Type: application/x-www-form-urlencoded\n");
+    client.print("Content-Length: ");
+    client.print(postData.length());
+    client.print("\n\n");
+
+    client.print(postData);
+    client.stop();
+  }
 }
 
 /***************************************************************
@@ -211,9 +291,6 @@ void loop() {
  ***************************************************************/
 
 boolean restoreConfig() {
-#ifdef DEBUG
-  Serial.println("Reading EEPROM...");
-#endif
   String ssid = "";
   String pass = "";
 
@@ -232,64 +309,59 @@ boolean restoreConfig() {
   }
 
 #ifdef DEBUG
-  Serial.println("Reading EEPROM(2)...");
+  Serial.println("Reading EEPROM...");
 #endif
 
   if (EEPROM.read(EEPROM_SSID_ADDR) != 0) {
     for (int i = EEPROM_SSID_ADDR; i < EEPROM_SSID_ADDR + 32; ++i) {
-      ssid += char(EEPROM.read(i));
+      char c =char(EEPROM.read(i));
+      if (c > 0 && c < 255) {   
+        ssid += c;
+      }
     }
     for (int i = EEPROM_PASS_ADDR; i < EEPROM_PASS_ADDR + 64; ++i) {
-      pass += char(EEPROM.read(i));
+      char c =char(EEPROM.read(i));
+      if (c > 0 && c < 255) {   
+        pass += c;
+      }
     }
-#ifdef DEBUG
-    Serial.print("ssid:");
-    Serial.println(ssid);
-    Serial.print("pass:");
-    Serial.println(pass);
-#endif
-    delay(100);
+    delay(10);
     WiFi.begin(ssid.c_str(), pass.c_str());
 #ifdef DEBUG
     Serial.println("WiFi started");
 #endif
-    delay(100);
+    delay(10);
     if (EEPROM.read(EEPROM_MDNS_ADDR) != 0) {
-      sitename = "";
+      website_name = "";
       for (int i = 0; i < 32; ++i) {
         byte c = EEPROM.read(EEPROM_MDNS_ADDR + i);
         if (c == 0) {
           break;
         }
-        sitename += char(c);
+        website_name += char(c);
       }
     }
 
-    int e_schedule  = EEPROM.read(EEPROM_SCHEDULE_ADDR) == 1 ? 1 : 0;
+    int e_schedule = EEPROM.read(EEPROM_SCHEDULE_ADDR) == 1 ? 1 : 0;
     light.enable(e_schedule == 0 ? 0 : 1);
+    //    lights[1]->enable(e_schedule == 0 ? 0 : 1);
 
-    int e_on_h  = EEPROM.read(EEPROM_SCHEDULE_ADDR + 1);
-    int e_on_m  = EEPROM.read(EEPROM_SCHEDULE_ADDR + 2);
-    int e_off_h = EEPROM.read(EEPROM_SCHEDULE_ADDR + 3);
-    int e_off_m = EEPROM.read(EEPROM_SCHEDULE_ADDR + 4);
-    light.schedule(e_on_h, e_on_m, e_off_h, e_off_m);
-
-    int e_dim = EEPROM.read(EEPROM_DIM_ADDR) | EEPROM.read(EEPROM_DIM_ADDR + 1) << 8;
-    light.dim(e_dim);
-#ifdef DEBUG
-    Serial.print("schedule:");
-    Serial.println(light.enable());
-    Serial.print("dim:");
-    Serial.println(light.dim());
-    Serial.print("schedule: ");
-    Serial.print(light.on_h());
-    Serial.print(":");
-    Serial.print(light.on_m());
-    Serial.print("-");
-    Serial.print(light.off_h());
-    Serial.print(":");
-    Serial.println(light.off_m());
-#endif
+    int e_max = EEPROM.read(EEPROM_MAX_ADDR) | EEPROM.read(EEPROM_MAX_ADDR + 1)
+                                                   << 8;
+    light.max_power(e_max);
+    for (int jj = 0; jj < MAX_LED_NUM; jj++) {
+      int k = 0;
+      for (int j = 0; j < 24; j++) {
+        for (int i = 0; i < 60; i += 10) {
+          ESP.wdtFeed();
+          uint8_t val = EEPROM.read(EEPROM_POWER_ADDR + 144 * jj + k);
+          val = val > 100 ? 100 : val;
+          light.powerAtTime(jj, val, j, i);
+          k++;
+          delay(1);
+        }
+      }
+    }
 
     return true;
   } else {
@@ -306,10 +378,14 @@ boolean restoreConfig() {
 
 boolean checkConnection() {
   int count = 0;
-  while ( count < 60 ) {
+  while (count < 10) {
     if (WiFi.status() == WL_CONNECTED) {
+#ifdef DEBUG
+      Serial.println();
+#endif
       return true;
     }
+    ESP.wdtFeed();
     delay(500);
 #ifdef DEBUG
     Serial.print(".");
@@ -363,12 +439,19 @@ void startWebServer_setting() {
     EEPROM.commit();
     String s = "<h2>Setup complete</h2><p>Device will be connected to \"";
     s += ssid;
-    s += "\" after the restart.</p><p>Your computer also need to re-connect to \"";
+    s += "\" after the restart.</p><p>Your computer also need to re-connect to "
+         "\"";
     s += ssid;
-    s += "\".</p><p><button class=\"pure-button\" onclick=\"return quitBox();\">Close</button></p>";
-    s += "<script>function quitBox() { open(location, '_self').close();return false;};setTimeout(\"quitBox()\",10000);</script>";
+    s += "\".</p><p><button class=\"pure-button\" onclick=\"return "
+         "quitBox();\">Close</button></p>";
+    s += "<script>function quitBox() { open(location, '_self').close();return "
+         "false;};setTimeout(\"quitBox()\",10000);</script>";
     webServer.send(200, "text/html", makePage("Wi-Fi Settings", s));
     timer_count = 0;
+    ESP.restart();
+    while (1) {
+      delay(0);
+    }
   });
   webServer.onNotFound([]() {
 #ifdef DEBUG
@@ -402,7 +485,7 @@ You can specify site name for accessing a name like http://aquamonitor.local/</p
 </div>
 </div>
 )=====";
-  webServer.send(200, "text/html", makePage("Wi-Fi Settings", s));
+    webServer.send(200, "text/html", makePage("Wi-Fi Settings", s));
   });
   webServer.begin();
 }
@@ -420,125 +503,157 @@ void startWebServer_normal() {
       EEPROM.write(i, 0);
     }
     EEPROM.commit();
-    String s = "<h3 class=\"if-head\">Reset ALL</h3><p>Cleared all settings. Please reset device.</p>";
-    s += "<p><button class=\"pure-button\" onclick=\"return quitBox();\">Close</button></p>";
-    s += "<script>function quitBox() { open(location, '_self').close();return false;};</script>";
+    String s = "<h3 class=\"if-head\">Reset ALL</h3><p>Cleared all settings. "
+               "Please reset device.</p>";
+    s += "<p><button class=\"pure-button\" onclick=\"return "
+         "quitBox();\">Close</button></p>";
+    s += "<script>function quitBox() { open(location, '_self').close();return "
+         "false;};</script>";
     webServer.send(200, "text/html", makePage("Reset ALL Settings", s));
     timer_count = 0;
+    ESP.restart();
+    while (1) {
+      delay(0);
+    }
   });
   webServer.on("/wifireset", []() {
     for (int i = 0; i < EEPROM_MDNS_ADDR; ++i) {
       EEPROM.write(i, 0);
     }
     EEPROM.commit();
-    String s = "<h3 class=\"if-head\">Reset WiFi</h3><p>Cleared WiFi settings. Please reset device.</p>";
-    s += "<p><button class=\"pure-button\" onclick=\"return quitBox();\">Close</button></p>";
-    s += "<script>function quitBox() { open(location, '_self').close();return false;}</script>";
+    String s = "<h3 class=\"if-head\">Reset WiFi</h3><p>Cleared WiFi settings. "
+               "Please reset device.</p>";
+    s += "<p><button class=\"pure-button\" onclick=\"return "
+         "quitBox();\">Close</button></p>";
+    s += "<script>function quitBox() { open(location, '_self').close();return "
+         "false;}</script>";
     webServer.send(200, "text/html", makePage("Reset WiFi Settings", s));
     timer_count = 0;
+    ESP.restart();
+    while (1) {
+      delay(0);
+    }
   });
   webServer.on("/", handleRoot);
+  webServer.on("/jqp_min.js", handle_jqp_min_js);
+  webServer.on("/jqp_cursor.js", handle_jqp_cursor_js);
+  webServer.on("/jqp_dragable.js", handle_jqp_dragable_js);
+  webServer.on("/jqp_dateAxisRenderer.js", handle_jqp_dateAxisRenderer_js);
+  webServer.on("/jqp_min.css", handle_jqp_css);
   webServer.on("/pure.css", handleCss);
   webServer.on("/reboot", handleReboot);
   webServer.on("/on", handleActionOn);
   webServer.on("/off", handleActionOff);
-//  webServer.on("/power", handleActionPower);
   webServer.on("/status", handleStatus);
   webServer.on("/config", handleConfig);
   webServer.begin();
 }
 
-void handleRoot() {
-  send_fs("/index.html","text/html");  
+void handleRoot() { send_fs("/index.html", "text/html"); }
+
+void handle_jqp_min_js() { send_fs("/jqp_min.js", "application/javascript"); }
+
+void handle_jqp_cursor_js() {
+  send_fs("/jqp_cursor.js", "application/javascript");
 }
 
-void handleCss() {
-  send_fs("/pure.css","text/css");  
+void handle_jqp_dateAxisRenderer_js() {
+  send_fs("/jqp_dateAxisRenderer.js", "application/javascript");
 }
+
+void handle_jqp_dragable_js() {
+  send_fs("/jqp_dragable.js", "application/javascript");
+}
+
+void handle_jqp_css() { send_fs("/jqp_min.css", "text/css"); }
+
+void handleCss() { send_fs("/pure.css", "text/css"); }
 
 void handleReboot() {
   String message;
   message = "{reboot:\"done\"}";
   webServer.send(200, "application/json", message);
   ESP.restart();
+  while (1) {
+    delay(0);
+  }
 }
 
 void handleActionOn() {
   String message, argname, argv;
-  int p = -1,err;
+  int p = -1, err;
+  uint8_t l = 0;
 
   // on
   DynamicJsonBuffer jsonBuffer;
-  JsonObject& json = jsonBuffer.createObject();
+  JsonObject &json = jsonBuffer.createObject();
 
   for (int i = 0; i < webServer.args(); i++) {
     argname = webServer.argName(i);
     argv = webServer.arg(i);
-    if (argname == "power") {
+    if (argname == "light") {
+      l = argv.toInt();
+    } else if (argname == "brightness") {
       p = argv.toInt();
     }
   }
   if (p >= 0) {
-    err = light.control(p);
+    err = light.control(l, p);
   } else {
-    err = light.control(MAX_PWM_VALUE);    
+    err = light.control(l, 100);
   }
   if (err < 0) {
-    json["error"] = "Cannot turn on/off light while schedule is set.";
+    json["error"] = "Cannot turn on/off light while schedule is enabled.";
+  } else {
+    json["light"] = l;
+    json["brightness"] = light.brightness(l);
+    json["pwm"] = light.power(l);
+    json["status"] = light.status(l);
+    //    json["timestamp"] = timestamp();
   }
-  json["power"] = light.power();
-  json["status"] = light.status();
-  json["timestamp"] = timestamp();  
-  json.printTo(message);
-  webServer.send(200, "application/json", message);
-}
-
-void handleActionPower() {
-  String message;
-
-  // on
-  DynamicJsonBuffer jsonBuffer;
-  JsonObject& json = jsonBuffer.createObject();
-
-  int p = webServer.arg("value").toInt();
-
-  int err = light.control(p);
-  if (err < 0) {
-    json["error"] = "Cannot turn on/off light while schedule is set.";
-  }
-  json["power"] = light.power();
-  json["status"] = light.status();
-  json["timestamp"] = timestamp();  
   json.printTo(message);
   webServer.send(200, "application/json", message);
 }
 
 void handleActionOff() {
-  String message;
+  String message, argname, argv;
   DynamicJsonBuffer jsonBuffer;
-  JsonObject& json = jsonBuffer.createObject();
+  JsonObject &json = jsonBuffer.createObject();
+  uint8_t l = 0;
 
+  for (int i = 0; i < webServer.args(); i++) {
+    argname = webServer.argName(i);
+    argv = webServer.arg(i);
+    if (argname == "light") {
+      l = argv.toInt();
+    }
+  }
   // off
-  int err = light.control(0);
+
+  int err = light.control(l, 0);
   if (err < 0) {
     json["error"] = "Cannot turn on/off light while schedule is set.";
   }
-  json["power"] = light.power();
-  json["status"] = light.status();
-  json["timestamp"] = timestamp();  
+  json["light"] = l;
+  json["brightness"] = light.brightness(l);
+  json["status"] = light.status(l);
+  json["timestamp"] = timestamp();
   json.printTo(message);
   webServer.send(200, "application/json", message);
 }
 
 void handleConfig() {
-  String message,argname,argv;
-  int en,on_h,on_m,off_h,off_m,dim;
+  String message, argname, argv;
+  char buf[5];
+  int en, on_h, on_m, off_h, off_m, dim;
   DynamicJsonBuffer jsonBuffer;
-  JsonObject& json = jsonBuffer.createObject();
+  JsonObject &json = jsonBuffer.createObject();
+  JsonArray &powerarray = json.createNestedArray("power");
 
   on_h = on_m = off_h = off_m = dim = -1;
 
   for (int i = 0; i < webServer.args(); i++) {
+    ESP.wdtFeed();
     argname = webServer.argName(i);
     argv = webServer.arg(i);
 #ifdef DEBUG
@@ -548,85 +663,79 @@ void handleConfig() {
     Serial.println(argv);
 #endif
     if (argname == "enable") {
-       en = (argv ==  "true" ? 1 : 0);
-       light.enable(en);
-       EEPROM.write(EEPROM_SCHEDULE_ADDR, char(light.enable()));
-       EEPROM.commit();
-   } else if (argname == "on_h") {
-       on_h  = argv.toInt();
-    } else if (argname == "on_m") {
-       on_m  = argv.toInt();
-    } else if (argname == "off_h") {
-       off_h  = argv.toInt();
-    } else if (argname == "off_m") {
-       off_m  = argv.toInt();
-    } else if (argname == "dim") {
-       dim  = argv.toInt();
-       light.dim(dim);
-       EEPROM.write(EEPROM_DIM_ADDR,   char(light.dim() & 0xFF));
-       EEPROM.write(EEPROM_DIM_ADDR+1,   char(light.dim() >> 8));
-       EEPROM.commit();
+      en = (argv == "true" ? 1 : 0);
+      light.enable(en);
+      // lights[1]->enable(en);
+      EEPROM.write(EEPROM_SCHEDULE_ADDR, char(en));
+      EEPROM.commit();
+    } else if (argname.substring(0, 1) == "p") {
+      uint8_t ll = argname.substring(1, 2).toInt();
+      uint8_t hh = argname.substring(3, 5).toInt();
+      uint8_t m = argname.substring(5, 6).toInt();
+      uint16_t address = ll * 144 + hh * 6 + m;
+      uint8_t val = argv.toInt();
+      light.powerAtTime(ll, val, hh, m * 10);
+      EEPROM.write(EEPROM_POWER_ADDR + address, val);
+      EEPROM.commit();
+    } else if (argname == "max_power") {
+      int max_v = argv.toInt();
+      light.max_power(max_v);
+      // lights[1]->max_power(max_v);
+      EEPROM.write(EEPROM_MAX_ADDR, char(max_v & 0xFF));
+      EEPROM.write(EEPROM_MAX_ADDR + 1, char(max_v >> 8));
+      EEPROM.commit();
     }
   }
 
-  if (!(on_h < 0 || on_m < 0 || off_h < 0 || off_m < 0)) {
-    light.schedule(on_h,on_m,off_h,off_m);
-    EEPROM.write(EEPROM_SCHEDULE_ADDR + 1, char(light.on_h()));
-    EEPROM.write(EEPROM_SCHEDULE_ADDR + 2, char(light.on_m()));
-    EEPROM.write(EEPROM_SCHEDULE_ADDR + 3, char(light.off_h()));
-    EEPROM.write(EEPROM_SCHEDULE_ADDR + 4, char(light.off_m()));
-    EEPROM.commit();
+  for (int jj = 0; jj < MAX_LED_NUM; jj++) {
+    ESP.wdtFeed();
+    JsonArray &powerseq = powerarray.createNestedArray();
+    for (int j = 0; j < 24; j++) {
+      for (int i = 0; i < 60; i += 10) {
+        powerseq.add(light.powerAtTime(jj, j, i));
+      }
+    }
   }
-  
+
   json["enable"] = boolstr[light.enable()];
-  json["dim"] = light.dim();
-  json["on_h"] = light.on_h();
-  json["on_m"] = light.on_m();
-  json["off_h"] = light.off_h();
-  json["off_m"] = light.off_m();
-  json["timestamp"] = timestamp();  
+  //  json["power"] = power;
+  json["max_power"] = light.max_power();
   json.printTo(message);
   webServer.send(200, "application/json", message);
 }
-
 
 void handleStatus() {
   String message;
   DynamicJsonBuffer jsonBuffer;
-  JsonObject& json = jsonBuffer.createObject();
-  json["power"] = light.power();
-  json["status"] = light.status();
-  json["timestamp"] = timestamp();  
-  json.printTo(message);
+  JsonArray &arr = jsonBuffer.createArray();
+  for (uint8_t jj = 0; jj < MAX_LED_NUM; jj++) {
+    JsonObject &json = arr.createNestedObject();
+    json["brightness"] = light.brightness(jj);
+    json["pwm"] = light.power(jj);
+    json["status"] = light.status(jj);
+  }
+  arr.printTo(message);
   webServer.send(200, "application/json", message);
-}
-
-String timestamp_s7s() {
-  String ts;
-  DateTime now = rtc.now();
-  char str[20];
-  sprintf(str,"%02d%02d",now.hour(),now.minute());
-  ts = str;
-  return ts; 
 }
 
 String timestamp() {
   String ts;
   DateTime now = rtc.now();
   char str[20];
-  sprintf(str,"%04d-%02d-%02d %02d:%02d:%02d",now.year(),now.month(),now.day(),now.hour(),now.minute(),now.second());
+  sprintf(str, "%04d-%02d-%02d %02d:%02d:%02d", now.year(), now.month(),
+          now.day(), now.hour(), now.minute(), now.second());
   ts = str;
-  return ts; 
+  return ts;
 }
 
-void send_fs (String path,String contentType) {
-  if(SPIFFS.exists(path)){
+void send_fs(String path, String contentType) {
+  if (SPIFFS.exists(path)) {
     File file = SPIFFS.open(path, "r");
     size_t sent = webServer.streamFile(file, contentType);
     file.close();
-  } else{
+  } else {
     webServer.send(500, "text/plain", "BAD PATH");
-  }  
+  }
 }
 
 String makePage(String title, String contents) {
@@ -637,7 +746,7 @@ String makePage(String title, String contents) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="/pure.css">
-)=====";  
+)=====";
   s += "<title>";
   s += title;
   s += "</title></head><body>";
@@ -686,63 +795,39 @@ String urlDecode(String input) {
   return s;
 }
 
-
-/*
-   NTP related functions
-*/
-/*
-// send an NTP request to the time server at the given address
-void sendNTPpacket(const char* address) {
-  //  Serial.print("sendNTPpacket : ");
-  //  Serial.println(address);
-
-  // set all bytes in the buffer to 0
-  memset(packetBuffer, 0, NTP_PACKET_SIZE);
-  // Initialize values needed to form NTP request
-  // (see URL above for details on the packets)
-  packetBuffer[0]  = 0b11100011;   // LI, Version, Mode
-  packetBuffer[1]  = 0;     // Stratum, or type of clock
-  packetBuffer[2]  = 6;     // Polling Interval
-  packetBuffer[3]  = 0xEC;  // Peer Clock Precision
-  // 8 bytes of zero for Root Delay & Root Dispersion
-  packetBuffer[12] = 49;
-  packetBuffer[13] = 0x4E;
-  packetBuffer[14] = 49;
-  packetBuffer[15] = 52;
-  // all NTP fields have been given values, now
-  // you can send a packet requesting a timestamp:
-  udp.beginPacket(address, 123); //NTP requests are to port 123
-  udp.write(packetBuffer, NTP_PACKET_SIZE);
-  udp.endPacket();
-}
-
-uint32_t readNTPpacket() {
-  //  Serial.println("Receive NTP Response");
-  udp.read(packetBuffer, NTP_PACKET_SIZE);  // read packet into the buffer
-  unsigned long secsSince1900 = 0;
-  // convert four bytes starting at location 40 to a long integer
-  secsSince1900 |= (unsigned long)packetBuffer[40] << 24;
-  secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
-  secsSince1900 |= (unsigned long)packetBuffer[42] <<  8;
-  secsSince1900 |= (unsigned long)packetBuffer[43] <<  0;
-  return secsSince1900 - 2208988800UL; // seconds since 1970
-}
-
-uint32_t getNTPtime() {
-  while (udp.parsePacket() > 0) ; // discard any previously received packets
-#ifdef DEBUG
-  Serial.println("Transmit NTP Request");
-#endif
-  sendNTPpacket(timeServer);
-
-  uint32_t beginWait = millis();
-  while (millis() - beginWait < 1500) {
-    int size = udp.parsePacket();
-    if (size >= NTP_PACKET_SIZE) {
-      return readNTPpacket();
+void setupArduinoOTA() {
+  ArduinoOTA.setPort(8266);
+  // Hostname defaults to esp8266-[ChipID]
+  ArduinoOTA.setHostname(website_name.c_str());
+  ArduinoOTA.onStart([]() {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH) {
+      type = "sketch";
+    } else { // U_SPIFFS
+      type = "filesystem";
     }
-  }
-
-  return 0; // return 0 if unable to get the time
+    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS
+    // using SPIFFS.end()
+    // Serial.println("Start updating " + type);
+  });
+  ArduinoOTA.onEnd([]() { Serial.println("\nEnd"); });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("%u", (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) {
+      Serial.println("Auth Failed");
+    } else if (error == OTA_BEGIN_ERROR) {
+      Serial.println("Begin Failed");
+    } else if (error == OTA_CONNECT_ERROR) {
+      Serial.println("Connect Failed");
+    } else if (error == OTA_RECEIVE_ERROR) {
+      Serial.println("Receive Failed");
+    } else if (error == OTA_END_ERROR) {
+      Serial.println("End Failed");
+    }
+  });
+  ArduinoOTA.begin();
+  delay(100);
 }
-*/

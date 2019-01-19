@@ -1,197 +1,120 @@
 #include "ledlight.h"
 
-ledLight::ledLight(uint8_t pin) {
-  _dim = 0;
-  _pin = pin;
+ledLight::ledLight() {
   _reset_flag = 1;
-  _status = 0;
-  pinMode(_pin, OUTPUT);
+  for (int i=0;i<MAX_LED_NUM;i++) {
+    _status[i] = _power[i]  = 0;
+  }
 }
 
-uint8_t ledLight::status() {
-  return _status;
+void ledLight::begin() {
+  driver[0].begin(PCA9633_ADDRESS_1);
+  driver[1].begin(PCA9633_ADDRESS_2);
+  for (int i=0;i<MAX_LED_NUM;i++) {
+    power(i,0);
+  }
 }
 
-int ledLight::enable() {
-  return _enable_schedule;
-}
+uint8_t ledLight::status(uint8_t v) { return _status[v]; }
 
+int ledLight::enable() { return _enable_schedule; }
 
 // スケジュールを有効(1)・無効(0)にする．
-void ledLight::enable(int v) {
-  _enable_schedule = (v == 0 ? 0 : 1);
+void ledLight::enable(int v) { _enable_schedule = (v == 0 ? 0 : 1); }
+
+int ledLight::max_power() { return int(_max_pwm_value); }
+
+void ledLight::max_power(int v) {
+  _max_pwm_value = constrain(v, 0, MAX_PWM_VALUE);
 }
 
-// スケジュールの点灯・消灯時刻を設定する．
-void ledLight::schedule(int on_h, int on_m, int off_h, int off_m) {
-  if (on_h >= 0 && on_h <= 23) {
-    _on_h = on_h;
-  } else {
-    _on_h = 0;
-  }
-  if (on_m >= 0 && on_m <= 59) {
-    _on_m = on_m;
-  } else {
-    _on_m = 0;
-  }
-  if (off_h >= 0 && off_h <= 23) {
-    _off_h = off_h;
-  } else {
-    _off_h = 0;
-  }
-  if (off_m >= 0 && off_m <= 59) {
-    _off_m = off_m;
-  } else {
-    _off_m = 0;
-  }
+int ledLight::brightness(uint8_t light) { 
+  return int(0.5 + (_power[light] > 50 ? _power[light]-PWM_MIN : 0) / (_max_pwm_value - PWM_MIN) * 100); 
 }
 
-int ledLight::power() {
-  return int(_power);
+void ledLight::brightness(uint8_t light,float v) { 
+  power(light,map(v,0,100,PWM_MIN,_max_pwm_value));
 }
 
-void ledLight::power(float v) {
-  if (v > 0 && v < MAX_PWM_VALUE ) {
-    _power = v;
-  } else if (v >= MAX_PWM_VALUE ) {
-    _power = MAX_PWM_VALUE;
-  } else if (v <= 0) {
-    _power = 0;
-  }
+int ledLight::power(uint8_t light) { return int(_power[light]); }
 
-  if (_power >= MAX_PWM_VALUE) {
-    _power = MAX_PWM_VALUE;
-    _int_power = MAX_PWM_VALUE;
-    analogWrite(_pin, MAX_PWM_VALUE);
-    _status = LIGHT_ON;
-  } else if (_power <= 0) {
-    _power = 0;
-    _int_power = 0;
-    analogWrite(_pin, 0);
-    _status = LIGHT_OFF;
-  } else {
-    if (_int_power != int(_power)) {
-        _int_power = int(_power);
-        analogWrite(_pin, _int_power);
-    }
+void ledLight::power(uint8_t light, float v) {
+  float prev_power;
+
+  if (light >= MAX_LED_NUM)
+    return;
+  prev_power = _power[light];
+
+  _power[light] = constrain(v, 0, _max_pwm_value);
+  if (_power[light] >= _max_pwm_value) {
+    _power[light] = _max_pwm_value;
+    driver[light/4].setpwm(light % 4 , _power[light]);
+    _status[light] = LIGHT_ON;
+  } else if (_power[light] <= 50) {
+    _power[light] = 0;
+    driver[light/4].setpwm(light % 4 , 0);
+    _status[light] = LIGHT_OFF;
+  } else {    
+      if (prev_power <= PWM_MIN) {
+        driver[light/4].setpwm(light % 4 , PWM_ON_THRESHOLD);
+        delay(1);
+      }
+      driver[light/4].setpwm(light % 4 , _power[light]);
+      _status[light] = LIGHT_ON;
   }
 #ifdef DEBUG
   Serial.print("pwm: ");
-  Serial.println(_power);
+  Serial.println(_power[light]);
   Serial.print("status: ");
-  Serial.println(_status);
+  Serial.println(_status[light]);
 #endif
 }
 
-void ledLight::on_h(int v) {
-  _on_h = v;
-}
-void ledLight::on_m(int v) {
-  _on_m = v;
-}
-void ledLight::off_h(int v) {
-  _off_h = v;
-}
-void ledLight::off_m(int v) {
-  _off_m = v;
-}
-int ledLight::on_h() {
-  return _on_h;
-}
-int ledLight::on_m() {
-  return _on_m;
-}
-int ledLight::off_h() {
-  return _off_h;
-}
-int ledLight::off_m() {
-  return _off_m;
+void ledLight::powerAtTime(uint8_t light,uint8_t val, uint8_t h, uint8_t m) {
+  if (m % 10 == 0) {
+    _powerAtTime[light][h * 6 + m / 10] = val;
+  }
 }
 
-uint16_t ledLight::dim() {
-  return _dim;
+uint8_t ledLight::powerAtTime(uint8_t light,uint8_t h, uint8_t m) {
+  if (m % 10 == 0) {
+    return _powerAtTime[light][h * 6 + m / 10];
+  }
 }
-
-// dimの間隔(秒)を指定する．dimが0の時は，照明は瞬時に点消灯する．
-void ledLight::dim(int v) {
-  _dim = v;
-}
-
 
 // ライトをvalの強さで光らせる．スケジュールが設定されているときは，-1を返し何もしない．
-int ledLight::control(uint16_t val) {
-  if (_enable_schedule) {
-    return -1;
-  } else {
-    power(val);
+int ledLight::control(uint8_t light, uint16_t val) {
+  if (!_enable_schedule) {
+    brightness(light,val);
     return val;
+  } else {
+    return -1;
   }
 }
 
 // hh:mm時点で点灯すべきかどうかを判断する．1秒毎に呼び出される．
-int ledLight::control(int hh, int mm) {
-  if (_status == LIGHT_TURNING_ON) {
-    _power = _power + (float(MAX_PWM_VALUE) / float(_dim));
-    if (_power >= MAX_PWM_VALUE) {
-      power(MAX_PWM_VALUE);
-      _status = LIGHT_ON;
-    } else {
-      power(_power);
-    }
-  }
-  else if (_status == LIGHT_TURNING_OFF) {
-    _power = _power - (float(MAX_PWM_VALUE) / float(_dim));
-    if (_power <= 0) {
-      power(0);
-      _status = LIGHT_OFF;
-    } else {
-      power(_power);
-    }
-  }
-  else if (_enable_schedule) {
-    if ((_on_h < _off_h) || (_on_h == _off_h && _on_m <= _off_m )) {
-      if ((hh > _on_h || hh >= _on_h && mm >= _on_m) && (hh < _off_h || hh == _off_h && mm < _off_m)) {
-        if (power() == 0) {
-          if (_reset_flag || _dim == 0) {
-            power(MAX_PWM_VALUE);
-            _status = LIGHT_ON;
-          } else {
-            _status = LIGHT_TURNING_ON;
-          }
-        }
+int ledLight::control(uint8_t light,int hh, int mm, int ss) {
+  if (_enable_schedule) {
+    uint8_t current_power, previous_power, next_power;
+    float current_pwm, previous_pwm, next_pwm;
+    int index = hh * 6 + mm / 10;
+
+    previous_power = _powerAtTime[light][index];
+    previous_pwm = map(previous_power,0,100,PWM_MIN,_max_pwm_value);
+    next_power = _powerAtTime[light][(index + 1) % 144];
+    next_pwm = map(next_power,0,100,PWM_MIN,_max_pwm_value);
+    float diff = (next_pwm - previous_pwm) / 600.0;
+    current_pwm = previous_pwm + diff * ((mm % 10)*60 + ss);
+
+    if (int(current_pwm) != power(light)) {
+      if (int(current_pwm) > 0) {
+//        _status[light] = LIGHT_ON;
+        power(light,current_pwm);
       } else {
-        if (power() == MAX_PWM_VALUE) {
-          if (_reset_flag || _dim == 0) {
-            power(0);
-            _status = LIGHT_OFF;
-          } else {
-            _status = LIGHT_TURNING_OFF;
-          }
-        }
+//        _status[light] = LIGHT_OFF;
+        power(light,0);
       }
     }
-    else if ((_on_h > _off_h) || (_on_h == _off_h && _on_m >= _off_m )) {
-      if ((hh > _off_h || hh >= _off_h && mm >= _off_m) && (hh < _on_h || hh == _on_h && mm < _on_m)) {
-        if (power() == MAX_PWM_VALUE) {
-          if (_reset_flag || _dim == 0) {
-            power(0);
-            _status = LIGHT_OFF;
-          } else {
-            _status = LIGHT_TURNING_OFF;
-          }
-        }
-      } else {
-        if (power() == 0) {
-          if (_reset_flag || _dim == 0) {
-            power(MAX_PWM_VALUE);
-            _status = LIGHT_ON;
-          } else {
-            _status = LIGHT_TURNING_ON;
-          }
-        }
-      }
-    }
-    _reset_flag = 0;
   }
-  return _status;
+  return _status[light];
 }
