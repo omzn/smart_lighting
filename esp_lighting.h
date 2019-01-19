@@ -18,7 +18,15 @@
 //#define PIN_SPI_MOSI  (13)
 //#define PIN_SPI_MISO  (12)
 
-#define MAX_LIGHT_UNITS              (1)
+#define PIN_TFT_DC    2
+#define PIN_TFT_RST   0
+//#define TFT_CS    10 // only for displays with CS pin
+#define PIN_TFT_MOSI  13   // for hardware SPI data pin (all of available pins)
+#define PIN_TFT_SCLK  14   // for hardware SPI sclk pin (all of available pins)
+
+#define CLOCK_POS_X 60
+#define CLOCK_POS_Y 136
+
 
 #define EEPROM_SSID_ADDR             (0)
 #define EEPROM_PASS_ADDR            (32)
@@ -27,7 +35,7 @@
 #define EEPROM_DIM_ADDR            (128+5)
 #define EEPROM_MAX_ADDR            (133+2)
 #define EEPROM_POWER_ADDR          (135+2)
-#define EEPROM_LAST_ADDR           (137+144*4)
+#define EEPROM_LAST_ADDR           (137+144*8)
 
 #define SECONDS_UTC_TO_JST (32400)
 

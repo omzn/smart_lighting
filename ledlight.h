@@ -5,13 +5,13 @@
 #include "pca9633.h"
 
 #define MAX_PWM_VALUE 255
-#define MAX_LED_NUM (4)
+#define MAX_LED_NUM (8)
 
 #define PWM_MIN (50)
 #define PWM_ON_THRESHOLD (104)
 
 #define PCA9633_ADDRESS_1            (0x60)
-#define PCA9633_ADDRESS_2            (0x61)
+#define PCA9633_ADDRESS_2            (0x62)
 
 enum {LIGHT_OFF=0,LIGHT_ON,LIGHT_TURNING_OFF,LIGHT_TURNING_ON};
 enum {LIGHT0=0,LIGHT1,LIGHT2,LIGHT3,LIGHT4,LIGHT5,LIGHT6,LIGHT7};
@@ -40,7 +40,6 @@ class ledLight {
     uint8_t _enable_schedule;
     uint8_t _status[MAX_LED_NUM]; 
     float _power[MAX_LED_NUM]; 
-    int _int_power[MAX_LED_NUM];
     int _reset_flag;
     uint8_t _powerAtTime[MAX_LED_NUM][144];
 };

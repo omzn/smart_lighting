@@ -105,7 +105,7 @@
     <script type="text/javascript">
         var targetPlot, controllerPlot;
 
-        var numberOfLEDs = 4;
+        var numberOfLEDs = 8;
         // make LED power form (this is a source of the graph)
         for (var jj = 0; jj < numberOfLEDs; jj++) {
             var jjs = jj.toString();
@@ -138,7 +138,7 @@
             for (var ff = 0; ff < numberOfLEDs; ff++) {
                 if (ff != jj) {
                     $('#leg_' + jjs).append("<button id='cp" + ff.toString() + jjs +
-                        "' type='button' class='button-cp pure-button'>Copy from Light " + ff.toString() +
+                        "' type='button' class='button-cp pure-button'>Copy " + ff.toString() +
                         "</button>");
                 }
             }

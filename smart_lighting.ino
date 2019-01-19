@@ -19,8 +19,10 @@
 
 #include "esp_lighting.h" // Configuration parameters
 
+#include <Adafruit_GFX.h> // Core graphics library by Adafruit
 #include <ArduinoJson.h>
 #include <ArduinoOTA.h>
+#include <Arduino_ST7789.h> // Hardware-specific library for ST7789 (with or without CS pin)
 #include <DNSServer.h>
 #include <EEPROM.h>
 #include <ESP8266WebServer.h>
@@ -34,10 +36,21 @@
 #include <Wire.h>
 #include <pgmspace.h>
 
-#include "SF_s7s_hw.h"
+#include "character.h"
+#include "util.h"
+
+#include "DSEG7Classic-Bold18pt7b.h"
+#include <Fonts/FreeSansBold18pt7b.h>
+#include <Fonts/FreeSansBold12pt7b.h>
+
+//#include "SF_s7s_hw.h"
 #include "ledlight.h"
 #include "ntp.h"
 #include "pca9633.h"
+
+#define FONT_7SEG18PT tft.setFont(&DSEG7Classic_Bold18pt7b)
+#define FONT_SANS18PT tft.setFont(&FreeSansBold18pt7b)
+#define FONT_SANS12PT tft.setFont(&FreeSansBold12pt7b)
 
 const String boolstr[2] = {"false", "true"};
 
@@ -54,17 +67,24 @@ uint32_t timer_count = 0;
 uint32_t p_millis;
 int prev_m = 0;
 int prev_s[MAX_LED_NUM];
+int prev_b[MAX_LED_NUM];
 
 DNSServer dnsServer;
-MDNSResponder mdns;
 const IPAddress apIP(192, 168, 1, 1);
 ESP8266WebServer webServer(80);
 WiFiClient client;
 
 RTC_Millis rtc;
 
+// Arduino_ST7789 tft = Arduino_ST7789(PIN_TFT_DC, PIN_TFT_RST, PIN_TFT_MOSI,
+//                                    PIN_TFT_SCLK); // for display without CS
+//                                    pin
+// Character aquatan = Character(&tft);
+Arduino_ST7789 tft =
+    Arduino_ST7789(PIN_TFT_DC, PIN_TFT_RST); // for display without CS pin
+Character aquatan = Character(&tft);
+
 NTP ntp("ntp.nict.jp");
-S7S s7s;
 ledLight light;
 
 /* Setup and loop */
@@ -80,20 +100,20 @@ void setup() {
   EEPROM.begin(2048);
   delay(10);
 
-  //  s7s.begin(9600);
-  s7s.clearDisplay();
-  s7s.setBrightness(255);
-  s7s.print("-HI-");
-
   SPIFFS.begin();
   rtc.begin(DateTime(2017, 1, 1, 0, 0, 0));
 #ifdef DEBUG
   Serial.println("RTC began");
 #endif
 
-
-  Wire.begin(PIN_SDA,PIN_SCL);
+  Wire.begin(PIN_SDA, PIN_SCL);
   light.begin();
+
+  tft.init(240, 240); // initialize a ST7789 chip, 240x240 pixels
+  ESP.wdtFeed();
+  tft.fillScreen(BLACK);
+  ESP.wdtFeed();
+  fillcircles();
 
   settingMode = true;
   WiFi.persistent(false);
@@ -105,9 +125,6 @@ void setup() {
     }
   }
   if (settingMode == true) {
-    s7s.clearDisplay();
-    s7s.print("SET ");
-    delay(500);
 #ifdef DEBUG
     Serial.println("Setting mode");
 #endif
@@ -127,6 +144,8 @@ void setup() {
 #ifdef DEBUG
     Serial.println("Wifi AP configured");
 #endif
+    tft.setCursor(0,120);
+    tft.print("Connect " + String(apSSID));
     startWebServer_setting();
 #ifdef DEBUG
     Serial.print("Starting Access Point at \"");
@@ -134,17 +153,27 @@ void setup() {
     Serial.println("\"");
 #endif
   } else {
-    s7s.clearDisplay();
-    s7s.print("norl");
     ntp.begin();
-    delay(250);
-    s7s.clearDisplay();
-    startWebServer_normal();
 #ifdef DEBUG
     Serial.println("Starting normal operation.");
 #endif
+    delay(10);
+    startWebServer_normal();
   }
   ESP.wdtEnable(WDTO_8S);
+  aquatan.start(ORIENT_FRONT);
+}
+
+void fillcircles() {
+  tft.setFont(&FreeSansBold18pt7b);
+  tft.setTextColor(WHITE);
+  for (uint8_t jj = 0; jj < MAX_LED_NUM; jj++) {
+    ESP.wdtFeed();
+    tft.fillCircle(30 + 60 * (jj % 4), 30 + (60 * (3 * (jj / 4))), 29, BLACK);
+    tft.drawCircle(30 + 60 * (jj % 4), 30 + (60 * (3 * (jj / 4))), 29, WHITE);
+    tft.setCursor(30 + 60 * (jj % 4) - 9, 30 + (60 * (3 * (jj / 4))) + 9);
+    tft.print(0);
+  }
 }
 
 void loop() {
@@ -169,37 +198,53 @@ void loop() {
       Serial.print("epoch:");
       Serial.println(epoch);
 #endif
+//      aquatan.queueMoveTo(208,208-60);
+      //aquatan.queueMoveTo(208,208-60);
+      //aquatan.queueAction(STATUS_WAIT,ORIENT_SLEEP,5000);
+      //aquatan.queueAction(STATUS_MOVE,0,60,2,2);
     }
     if (!settingMode) {
       DateTime now = rtc.now();
-      for (int jj = 0; jj < MAX_LED_NUM; jj++) {
+      tft.setFont(&FreeSansBold18pt7b);
+      for (uint8_t jj = 0; jj < MAX_LED_NUM; jj++) {
         int st = light.control(jj, now.hour(), now.minute(), now.second());
+        int br = light.brightness(jj);
+        if (prev_b[jj] != br) {
+/*          tft.fillCircle(30 + 60 * (jj%4), 30 + (60 * (3 * (jj / 4))), 29,
+                         tft.Color565(light.power(jj), light.power(jj), 0));
+          tft.drawCircle(30 + 60 * (jj%4), 30 + (60 * (3 * (jj / 4))), 29, WHITE);
+          tft.setCursor(30 + 60 * (jj%4) - (br < 10 ? 9 : (br > 99 ? 27 : 18)),
+                        30 + (60 * (3 * (jj / 4))) + 9);
+          tft.setTextColor(br > 50 ? BLACK : WHITE);
+          tft.print(br);
+          */
+          aquatan.queueMoveTo(14 + 60 * (jj%4), jj/4 ? 180-33 : 61, 2, 4);
+          aquatan.queueAction(STATUS_LIGHT,jj,tft.Color565(light.power(jj), light.power(jj), 0),br);
+        }
+        prev_b[jj] = br;
         if (st == LIGHT_ON) {
           if (prev_s[jj] != st) {
-//            post_data(5, "light" + String(jj), st);
-          }
-          if (prev_m != now.minute()) {
-            s7s.clearDisplay();
-            s7s.setBrightness(255);
-            s7s.printTime(timestamp_s7s());
+            //            post_data(5, "light" + String(jj), st);
           }
         } else if (st == LIGHT_OFF) {
           if (prev_s[jj] != st) {
-//            post_data(5, "light" + String(jj), st);
-          }
-          if (prev_m != now.minute()) {
-            s7s.clearDisplay();
-            s7s.setBrightness(127);
-            s7s.printTime(timestamp_s7s());
+            //            post_data(5, "light" + String(jj), st);
           }
         } else {
-          //        if (prev_s != st) {
-//          s7s.clearDisplay();
-//          s7s.setBrightness(255);
-//          s7s.print4d(light.power());
-          //          s7s.print("dirn");
-          //        }
         }
+          if (prev_m != now.minute()) {
+            char buf[6];
+            FONT_7SEG18PT;
+            tft.setCursor(CLOCK_POS_X, CLOCK_POS_Y);
+            tft.setTextColor(BLACK);
+            tft.print("88:88");
+            tft.setCursor(CLOCK_POS_X, CLOCK_POS_Y);
+            tft.setTextColor(WHITE);
+            sprintf(buf,"%02d:%02d",now.hour(),now.minute());
+            tft.print(buf);
+            FONT_SANS18PT;
+          }
+
         prev_m = now.minute();
         prev_s[jj] = st;
       }
@@ -207,7 +252,12 @@ void loop() {
     timer_count++;
     timer_count %= (86400UL);
   }
-  delay(10);
+  if (aquatan.getStatus() == STATUS_WAIT) {
+    aquatan.sleep();
+    aquatan.dequeueAction();
+  }
+  int d = aquatan.update();
+  delay(d + 1);
 }
 
 void post_data(int room, String label, float value) {
@@ -264,23 +314,23 @@ boolean restoreConfig() {
 
   if (EEPROM.read(EEPROM_SSID_ADDR) != 0) {
     for (int i = EEPROM_SSID_ADDR; i < EEPROM_SSID_ADDR + 32; ++i) {
-      ssid += char(EEPROM.read(i));
+      char c =char(EEPROM.read(i));
+      if (c > 0 && c < 255) {   
+        ssid += c;
+      }
     }
     for (int i = EEPROM_PASS_ADDR; i < EEPROM_PASS_ADDR + 64; ++i) {
-      pass += char(EEPROM.read(i));
+      char c =char(EEPROM.read(i));
+      if (c > 0 && c < 255) {   
+        pass += c;
+      }
     }
-#ifdef DEBUG
-    Serial.print("ssid:");
-    Serial.println(ssid);
-    Serial.print("pass:");
-    Serial.println(pass);
-#endif
-    delay(100);
+    delay(10);
     WiFi.begin(ssid.c_str(), pass.c_str());
 #ifdef DEBUG
     Serial.println("WiFi started");
 #endif
-    delay(100);
+    delay(10);
     if (EEPROM.read(EEPROM_MDNS_ADDR) != 0) {
       website_name = "";
       for (int i = 0; i < 32; ++i) {
@@ -294,7 +344,7 @@ boolean restoreConfig() {
 
     int e_schedule = EEPROM.read(EEPROM_SCHEDULE_ADDR) == 1 ? 1 : 0;
     light.enable(e_schedule == 0 ? 0 : 1);
-//    lights[1]->enable(e_schedule == 0 ? 0 : 1);
+    //    lights[1]->enable(e_schedule == 0 ? 0 : 1);
 
     int e_max = EEPROM.read(EEPROM_MAX_ADDR) | EEPROM.read(EEPROM_MAX_ADDR + 1)
                                                    << 8;
@@ -303,11 +353,12 @@ boolean restoreConfig() {
       int k = 0;
       for (int j = 0; j < 24; j++) {
         for (int i = 0; i < 60; i += 10) {
+          ESP.wdtFeed();
           uint8_t val = EEPROM.read(EEPROM_POWER_ADDR + 144 * jj + k);
           val = val > 100 ? 100 : val;
           light.powerAtTime(jj, val, j, i);
           k++;
-          delay(10);
+          delay(1);
         }
       }
     }
@@ -329,6 +380,9 @@ boolean checkConnection() {
   int count = 0;
   while (count < 10) {
     if (WiFi.status() == WL_CONNECTED) {
+#ifdef DEBUG
+      Serial.println();
+#endif
       return true;
     }
     ESP.wdtFeed();
@@ -527,7 +581,7 @@ void handleReboot() {
 
 void handleActionOn() {
   String message, argname, argv;
-  int p = -1,  err;
+  int p = -1, err;
   uint8_t l = 0;
 
   // on
@@ -555,7 +609,7 @@ void handleActionOn() {
     json["brightness"] = light.brightness(l);
     json["pwm"] = light.power(l);
     json["status"] = light.status(l);
-//    json["timestamp"] = timestamp();
+    //    json["timestamp"] = timestamp();
   }
   json.printTo(message);
   webServer.send(200, "application/json", message);
@@ -599,6 +653,7 @@ void handleConfig() {
   on_h = on_m = off_h = off_m = dim = -1;
 
   for (int i = 0; i < webServer.args(); i++) {
+    ESP.wdtFeed();
     argname = webServer.argName(i);
     argv = webServer.arg(i);
 #ifdef DEBUG
@@ -610,7 +665,7 @@ void handleConfig() {
     if (argname == "enable") {
       en = (argv == "true" ? 1 : 0);
       light.enable(en);
-      //lights[1]->enable(en);
+      // lights[1]->enable(en);
       EEPROM.write(EEPROM_SCHEDULE_ADDR, char(en));
       EEPROM.commit();
     } else if (argname.substring(0, 1) == "p") {
@@ -625,7 +680,7 @@ void handleConfig() {
     } else if (argname == "max_power") {
       int max_v = argv.toInt();
       light.max_power(max_v);
-      //lights[1]->max_power(max_v);
+      // lights[1]->max_power(max_v);
       EEPROM.write(EEPROM_MAX_ADDR, char(max_v & 0xFF));
       EEPROM.write(EEPROM_MAX_ADDR + 1, char(max_v >> 8));
       EEPROM.commit();
@@ -633,6 +688,7 @@ void handleConfig() {
   }
 
   for (int jj = 0; jj < MAX_LED_NUM; jj++) {
+    ESP.wdtFeed();
     JsonArray &powerseq = powerarray.createNestedArray();
     for (int j = 0; j < 24; j++) {
       for (int i = 0; i < 60; i += 10) {
@@ -660,15 +716,6 @@ void handleStatus() {
   }
   arr.printTo(message);
   webServer.send(200, "application/json", message);
-}
-
-String timestamp_s7s() {
-  String ts;
-  DateTime now = rtc.now();
-  char str[20];
-  sprintf(str, "%02d%02d", now.hour(), now.minute());
-  ts = str;
-  return ts;
 }
 
 String timestamp() {
